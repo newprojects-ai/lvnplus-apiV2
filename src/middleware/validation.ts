@@ -1,6 +1,35 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 
+const registerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+});
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+const templateSchema = z.object({
+  templateName: z.string().min(1),
+  boardId: z.number(),
+  testType: z.enum(['TOPIC', 'MIXED', 'MENTAL_ARITHMETIC']),
+  timingType: z.enum(['TIMED', 'UNTIMED']),
+  timeLimit: z.number().optional(),
+  configuration: z.object({
+    topics: z.array(z.number()),
+    subtopics: z.array(z.number()),
+    questionCounts: z.object({
+      easy: z.number(),
+      medium: z.number(),
+      hard: z.number(),
+    }),
+  }),
+});
+
 const testPlanSchema = z.object({
   templateId: z.string().optional(),
   boardId: z.number(),
@@ -27,6 +56,70 @@ const executionUpdateSchema = z.object({
     timeSpent: z.number(),
   }).optional(),
 });
+
+export const validateRegistration = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    registerSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateLogin = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    loginSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateTemplateCreation = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    templateSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateTemplateUpdate = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    templateSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
 
 export const validateTestPlanCreation = (
   req: Request,

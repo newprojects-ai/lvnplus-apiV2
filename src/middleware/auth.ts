@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
+import { UnauthorizedError } from '../utils/errors';
 
 declare global {
   namespace Express {
@@ -19,42 +21,51 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    const token = extractToken(req);
     
-    if (!authHeader) {
-      return res.status(401).json({
-        error: 'Authentication required',
-      });
+    if (!token) {
+      throw new UnauthorizedError('Authentication required');
     }
 
-    // TODO: Implement proper JWT verification
-    const userId = BigInt(1); // Temporary for testing
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    const user = await prisma.users.findUnique({
+      where: { user_id: BigInt(decoded.userId) },
       include: {
-        userRoles: {
+        user_roles: {
           include: {
-            role: true,
+            roles: true,
           },
         },
       },
     });
 
     if (!user) {
-      return res.status(401).json({
-        error: 'User not found',
-      });
+      throw new UnauthorizedError('User not found');
     }
 
     req.user = {
-      id: user.id,
+      id: user.user_id,
       email: user.email,
-      roles: user.userRoles.map(ur => ur.role.name),
+      roles: user.user_roles.map(ur => ur.roles.role_name),
     };
 
     next();
   } catch (error) {
-    next(error);
+    if (error instanceof jwt.JsonWebTokenError) {
+      next(new UnauthorizedError('Invalid token'));
+    } else {
+      next(error);
+    }
   }
 };
+
+function extractToken(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  
+  return req.cookies?.token || null;
+}
