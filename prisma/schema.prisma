@@ -7,183 +7,188 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            BigInt         @id @default(autoincrement()) @map("user_id")
-  email         String         @unique
-  passwordHash  String         @map("password_hash")
-  firstName     String?        @map("first_name")
-  lastName      String?        @map("last_name")
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  active        Boolean        @default(true)
-  userRoles     UserRole[]
-  createdTests  TestTemplate[] @relation("CreatedBy")
-  plannedTests  TestPlan[]     @relation("PlannedBy")
-  studentTests  TestPlan[]     @relation("StudentTests")
-  questions     Question[]
-
-  @@map("users")
+model exam_boards {
+  board_id       Int                    @id @default(autoincrement())
+  board_name     String                 @unique(map: "board_name") @db.VarChar(100)
+  description    String?                @db.Text
+  input_type     exam_boards_input_type
+  test_plans     test_plans[]
+  test_templates test_templates[]
 }
 
-model Role {
-  id          Int        @id @default(autoincrement()) @map("role_id")
-  name        String     @unique @map("role_name")
-  description String?    @db.Text
-  userRoles   UserRole[]
+model questions {
+  question_id      BigInt    @id @default(autoincrement())
+  subtopic_id      Int
+  question_text    String    @db.Text
+  options          String    @db.LongText
+  correct_answer   String    @db.VarChar(255)
+  difficulty_level Int       @db.TinyInt
+  created_at       DateTime? @default(now()) @db.Timestamp(0)
+  created_by       BigInt
+  active           Boolean?  @default(true)
+  subtopics        subtopics @relation(fields: [subtopic_id], references: [subtopic_id], onUpdate: Restrict, map: "questions_ibfk_1")
+  users            users     @relation(fields: [created_by], references: [user_id], onUpdate: Restrict, map: "questions_ibfk_2")
 
-  @@map("roles")
+  @@index([created_by], map: "created_by")
+  @@index([difficulty_level], map: "idx_questions_difficulty")
+  @@index([subtopic_id], map: "subtopic_id")
 }
 
-model UserRole {
-  userId BigInt @map("user_id")
-  roleId Int    @map("role_id")
-  user   User   @relation(fields: [userId], references: [id])
-  role   Role   @relation(fields: [roleId], references: [id])
-
-  @@id([userId, roleId])
-  @@map("user_roles")
+model roles {
+  role_id     Int          @id @default(autoincrement())
+  role_name   String       @unique(map: "role_name") @db.VarChar(50)
+  description String?      @db.Text
+  user_roles  user_roles[]
 }
 
-model ExamBoard {
-  id          Int           @id @default(autoincrement()) @map("board_id")
-  name        String        @unique @map("board_name")
-  description String?       @db.Text
-  inputType   InputType     @map("input_type")
-  templates   TestTemplate[]
-  testPlans   TestPlan[]
-
-  @@map("exam_boards")
+model subjects {
+  subject_id   Int      @id @default(autoincrement())
+  subject_name String   @unique(map: "subject_name") @db.VarChar(100)
+  description  String?  @db.Text
+  topics       topics[]
 }
 
-model Subject {
-  id          Int      @id @default(autoincrement()) @map("subject_id")
-  name        String   @unique @map("subject_name")
-  description String?  @db.Text
-  topics      Topic[]
+model subtopics {
+  subtopic_id   Int         @id @default(autoincrement())
+  topic_id      Int
+  subtopic_name String      @db.VarChar(100)
+  description   String?     @db.Text
+  questions     questions[]
+  topics        topics      @relation(fields: [topic_id], references: [topic_id], onUpdate: Restrict, map: "subtopics_ibfk_1")
 
-  @@map("subjects")
+  @@unique([topic_id, subtopic_name], map: "unique_subtopic")
 }
 
-model Topic {
-  id          Int        @id @default(autoincrement()) @map("topic_id")
-  subjectId   Int        @map("subject_id")
-  name        String     @map("topic_name")
-  description String?    @db.Text
-  subject     Subject    @relation(fields: [subjectId], references: [id])
-  subtopics   Subtopic[]
+model test_executions {
+  execution_id BigInt                 @id @default(autoincrement())
+  test_plan_id BigInt
+  status       test_executions_status
+  started_at   DateTime?              @db.Timestamp(0)
+  completed_at DateTime?              @db.Timestamp(0)
+  test_data    String                 @db.LongText
+  score        Int?
+  test_plans   test_plans             @relation(fields: [test_plan_id], references: [test_plan_id], onUpdate: Restrict, map: "test_executions_ibfk_1")
 
-  @@unique([subjectId, name], name: "unique_topic")
-  @@map("topics")
+  @@index([status], map: "idx_test_executions_status")
+  @@index([test_plan_id], map: "test_plan_id")
 }
 
-model Subtopic {
-  id          Int        @id @default(autoincrement()) @map("subtopic_id")
-  topicId     Int        @map("topic_id")
-  name        String     @map("subtopic_name")
-  description String?    @db.Text
-  topic       Topic      @relation(fields: [topicId], references: [id])
-  questions   Question[]
+model test_plans {
+  test_plan_id                       BigInt                 @id @default(autoincrement())
+  template_id                        BigInt?
+  board_id                           Int
+  test_type                          test_plans_test_type
+  timing_type                        test_plans_timing_type
+  time_limit                         Int?
+  student_id                         BigInt
+  planned_by                         BigInt
+  planned_at                         DateTime?              @default(now()) @db.Timestamp(0)
+  configuration                      String                 @db.LongText
+  test_executions                    test_executions[]
+  test_templates                     test_templates?        @relation(fields: [template_id], references: [template_id], onDelete: Restrict, onUpdate: Restrict, map: "test_plans_ibfk_1")
+  exam_boards                        exam_boards            @relation(fields: [board_id], references: [board_id], onUpdate: Restrict, map: "test_plans_ibfk_2")
+  users_test_plans_student_idTousers users                  @relation("test_plans_student_idTousers", fields: [student_id], references: [user_id], onUpdate: Restrict, map: "test_plans_ibfk_3")
+  users_test_plans_planned_byTousers users                  @relation("test_plans_planned_byTousers", fields: [planned_by], references: [user_id], onUpdate: Restrict, map: "test_plans_ibfk_4")
 
-  @@unique([topicId, name], name: "unique_subtopic")
-  @@map("subtopics")
+  @@index([board_id], map: "board_id")
+  @@index([student_id], map: "idx_test_plans_student")
+  @@index([planned_by], map: "planned_by")
+  @@index([template_id], map: "template_id")
 }
 
-model Question {
-  id              BigInt    @id @default(autoincrement()) @map("question_id")
-  subtopicId      Int       @map("subtopic_id")
-  questionText    String    @map("question_text") @db.Text
-  options         Json
-  correctAnswer   String    @map("correct_answer")
-  difficultyLevel Int       @map("difficulty_level")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  createdBy       BigInt    @map("created_by")
-  active          Boolean   @default(true)
-  subtopic        Subtopic  @relation(fields: [subtopicId], references: [id])
-  creator         User      @relation(fields: [createdBy], references: [id])
+model test_templates {
+  template_id   BigInt                     @id @default(autoincrement())
+  template_name String                     @db.VarChar(255)
+  source        test_templates_source
+  created_by    BigInt
+  created_at    DateTime?                  @default(now()) @db.Timestamp(0)
+  board_id      Int
+  test_type     test_templates_test_type
+  timing_type   test_templates_timing_type
+  time_limit    Int?
+  configuration String                     @db.LongText
+  active        Boolean?                   @default(true)
+  test_plans    test_plans[]
+  users         users                      @relation(fields: [created_by], references: [user_id], onUpdate: Restrict, map: "test_templates_ibfk_1")
+  exam_boards   exam_boards                @relation(fields: [board_id], references: [board_id], onUpdate: Restrict, map: "test_templates_ibfk_2")
 
-  @@index([difficultyLevel])
-  @@map("questions")
+  @@index([board_id], map: "board_id")
+  @@index([created_by], map: "created_by")
+  @@index([source], map: "idx_templates_source")
 }
 
-model TestTemplate {
-  id            BigInt     @id @default(autoincrement()) @map("template_id")
-  name          String     @map("template_name")
-  source        Source
-  createdBy     BigInt     @map("created_by")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  boardId       Int        @map("board_id")
-  testType      TestType   @map("test_type")
-  timingType    TimingType @map("timing_type")
-  timeLimit     Int?       @map("time_limit")
-  configuration Json
-  active        Boolean    @default(true)
-  creator       User       @relation("CreatedBy", fields: [createdBy], references: [id])
-  examBoard     ExamBoard  @relation(fields: [boardId], references: [id])
-  testPlans     TestPlan[]
+model topics {
+  topic_id    Int         @id @default(autoincrement())
+  subject_id  Int
+  topic_name  String      @db.VarChar(100)
+  description String?     @db.Text
+  subtopics   subtopics[]
+  subjects    subjects    @relation(fields: [subject_id], references: [subject_id], onUpdate: Restrict, map: "topics_ibfk_1")
 
-  @@index([source])
-  @@map("test_templates")
+  @@unique([subject_id, topic_name], map: "unique_topic")
 }
 
-model TestPlan {
-  id            BigInt          @id @default(autoincrement()) @map("test_plan_id")
-  templateId    BigInt?         @map("template_id")
-  boardId       Int             @map("board_id")
-  testType      TestType        @map("test_type")
-  timingType    TimingType      @map("timing_type")
-  timeLimit     Int?            @map("time_limit")
-  studentId     BigInt          @map("student_id")
-  plannedBy     BigInt          @map("planned_by")
-  plannedAt     DateTime        @default(now()) @map("planned_at")
-  configuration Json
-  template      TestTemplate?   @relation(fields: [templateId], references: [id])
-  examBoard     ExamBoard      @relation(fields: [boardId], references: [id])
-  student       User           @relation("StudentTests", fields: [studentId], references: [id])
-  planner       User           @relation("PlannedBy", fields: [plannedBy], references: [id])
-  executions    TestExecution[]
+model user_roles {
+  user_id BigInt
+  role_id Int
+  users   users  @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "user_roles_ibfk_1")
+  roles   roles  @relation(fields: [role_id], references: [role_id], onUpdate: Restrict, map: "user_roles_ibfk_2")
 
-  @@index([studentId])
-  @@map("test_plans")
+  @@id([user_id, role_id])
+  @@index([role_id], map: "role_id")
 }
 
-model TestExecution {
-  id          BigInt           @id @default(autoincrement()) @map("execution_id")
-  testPlanId  BigInt          @map("test_plan_id")
-  status      ExecutionStatus
-  startedAt   DateTime?       @map("started_at")
-  completedAt DateTime?       @map("completed_at")
-  testData    Json           @map("test_data")
-  score       Int?
-  testPlan    TestPlan       @relation(fields: [testPlanId], references: [id])
-
-  @@index([status])
-  @@map("test_executions")
+model users {
+  user_id                                 BigInt           @id @default(autoincrement())
+  email                                   String           @unique(map: "email") @db.VarChar(255)
+  password_hash                           String           @db.VarChar(255)
+  first_name                              String?          @db.VarChar(100)
+  last_name                               String?          @db.VarChar(100)
+  created_at                              DateTime?        @default(now()) @db.Timestamp(0)
+  updated_at                              DateTime?        @default(now()) @db.Timestamp(0)
+  active                                  Boolean?         @default(true)
+  questions                               questions[]
+  test_plans_test_plans_student_idTousers test_plans[]     @relation("test_plans_student_idTousers")
+  test_plans_test_plans_planned_byTousers test_plans[]     @relation("test_plans_planned_byTousers")
+  test_templates                          test_templates[]
+  user_roles                              user_roles[]
 }
 
-enum InputType {
-  NUMERIC
-  MCQ
+enum test_executions_status {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
 }
 
-enum Source {
+enum test_templates_source {
   SYSTEM
   USER
 }
 
-enum TestType {
+enum exam_boards_input_type {
+  NUMERIC
+  MCQ
+}
+
+enum test_plans_test_type {
   TOPIC
   MIXED
   MENTAL_ARITHMETIC
 }
 
-enum TimingType {
+enum test_plans_timing_type {
   TIMED
   UNTIMED
 }
 
-enum ExecutionStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  COMPLETED
-  ABANDONED
+enum test_templates_test_type {
+  TOPIC
+  MIXED
+  MENTAL_ARITHMETIC
+}
+
+enum test_templates_timing_type {
+  TIMED
+  UNTIMED
 }

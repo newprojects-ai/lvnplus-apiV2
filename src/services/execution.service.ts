@@ -22,11 +22,11 @@ export class TestExecutionService {
       throw new ValidationError('Test has already been started');
     }
 
-    const updatedExecution = await prisma.testExecution.update({
-      where: { id: executionId },
+    const updatedExecution = await prisma.test_executions.update({
+      where: { execution_id: executionId },
       data: {
         status: 'IN_PROGRESS',
-        startedAt: new Date(),
+        started_at: new Date(),
       },
     });
 
@@ -44,13 +44,13 @@ export class TestExecutionService {
       throw new ValidationError('Test is not in progress');
     }
 
-    const testData = execution.testData as any;
+    const testData = JSON.parse(execution.test_data);
     testData.responses.push(updateData.response);
 
-    const updatedExecution = await prisma.testExecution.update({
-      where: { id: executionId },
+    const updatedExecution = await prisma.test_executions.update({
+      where: { execution_id: executionId },
       data: {
-        testData: testData,
+        test_data: JSON.stringify(testData),
       },
     });
 
@@ -69,11 +69,11 @@ export class TestExecutionService {
 
     const score = await this.calculateScore(execution);
 
-    const updatedExecution = await prisma.testExecution.update({
-      where: { id: executionId },
+    const updatedExecution = await prisma.test_executions.update({
+      where: { execution_id: executionId },
       data: {
         status: 'COMPLETED',
-        completedAt: new Date(),
+        completed_at: new Date(),
         score,
       },
     });
@@ -82,13 +82,13 @@ export class TestExecutionService {
   }
 
   private async findExecutionWithAccess(executionId: bigint, userId: bigint) {
-    const execution = await prisma.testExecution.findUnique({
-      where: { id: executionId },
+    const execution = await prisma.test_executions.findUnique({
+      where: { execution_id: executionId },
       include: {
-        testPlan: {
+        test_plans: {
           include: {
-            student: true,
-            planner: true,
+            users_test_plans_student_idTousers: true,
+            users_test_plans_planned_byTousers: true,
           },
         },
       },
@@ -99,8 +99,8 @@ export class TestExecutionService {
     }
 
     if (
-      execution.testPlan.studentId !== userId &&
-      execution.testPlan.plannedBy !== userId
+      execution.test_plans.student_id !== userId &&
+      execution.test_plans.planned_by !== userId
     ) {
       throw new UnauthorizedError('Unauthorized access to test execution');
     }
@@ -109,14 +109,14 @@ export class TestExecutionService {
   }
 
   private async calculateScore(execution: any): Promise<number> {
-    const testData = execution.testData as any;
+    const testData = JSON.parse(execution.test_data);
     let score = 0;
 
     for (const response of testData.responses) {
       const question = testData.questions.find(
-        (q: any) => q.id === response.questionId
+        (q: any) => q.question_id === response.questionId
       );
-      if (question && question.correctAnswer === response.answer) {
+      if (question && question.correct_answer === response.answer) {
         score++;
       }
     }
@@ -126,12 +126,12 @@ export class TestExecutionService {
 
   private formatExecutionResponse(execution: any): TestExecutionResponse {
     return {
-      id: execution.id,
+      executionId: execution.execution_id,
       status: execution.status,
-      startedAt: execution.startedAt,
-      completedAt: execution.completedAt,
+      startedAt: execution.started_at,
+      completedAt: execution.completed_at,
       score: execution.score,
-      testData: execution.testData,
+      testData: JSON.parse(execution.test_data),
     };
   }
 }

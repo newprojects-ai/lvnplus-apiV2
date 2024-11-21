@@ -17,12 +17,12 @@ export interface CreateTestPlanDTO {
 }
 
 export interface TestPlanResponse {
-  id: bigint;
+  testPlanId: bigint;
   testType: string;
   timingType: string;
   timeLimit?: number;
   student: {
-    id: bigint;
+    userId: bigint;
     email: string;
     firstName?: string;
     lastName?: string;
@@ -37,7 +37,7 @@ export interface TestPlanResponse {
 }
 
 export interface TestExecutionResponse {
-  id: bigint;
+  executionId: bigint;
   status: string;
   startedAt?: Date;
   completedAt?: Date;
