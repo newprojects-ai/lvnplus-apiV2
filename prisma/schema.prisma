@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            BigInt         @id @default(autoincrement()) @map("user_id")
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  firstName     String?        @map("first_name")
+  lastName      String?        @map("last_name")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  active        Boolean        @default(true)
+  userRoles     UserRole[]
+  createdTests  TestTemplate[] @relation("CreatedBy")
+  plannedTests  TestPlan[]     @relation("PlannedBy")
+  studentTests  TestPlan[]     @relation("StudentTests")
+  questions     Question[]
+
+  @@map("users")
+}
+
+model Role {
+  id          Int        @id @default(autoincrement()) @map("role_id")
+  name        String     @unique @map("role_name")
+  description String?    @db.Text
+  userRoles   UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId BigInt @map("user_id")
+  roleId Int    @map("role_id")
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model ExamBoard {
+  id          Int           @id @default(autoincrement()) @map("board_id")
+  name        String        @unique @map("board_name")
+  description String?       @db.Text
+  inputType   InputType     @map("input_type")
+  templates   TestTemplate[]
+  testPlans   TestPlan[]
+
+  @@map("exam_boards")
+}
+
+model Subject {
+  id          Int      @id @default(autoincrement()) @map("subject_id")
+  name        String   @unique @map("subject_name")
+  description String?  @db.Text
+  topics      Topic[]
+
+  @@map("subjects")
+}
+
+model Topic {
+  id          Int        @id @default(autoincrement()) @map("topic_id")
+  subjectId   Int        @map("subject_id")
+  name        String     @map("topic_name")
+  description String?    @db.Text
+  subject     Subject    @relation(fields: [subjectId], references: [id])
+  subtopics   Subtopic[]
+
+  @@unique([subjectId, name], name: "unique_topic")
+  @@map("topics")
+}
+
+model Subtopic {
+  id          Int        @id @default(autoincrement()) @map("subtopic_id")
+  topicId     Int        @map("topic_id")
+  name        String     @map("subtopic_name")
+  description String?    @db.Text
+  topic       Topic      @relation(fields: [topicId], references: [id])
+  questions   Question[]
+
+  @@unique([topicId, name], name: "unique_subtopic")
+  @@map("subtopics")
+}
+
+model Question {
+  id              BigInt    @id @default(autoincrement()) @map("question_id")
+  subtopicId      Int       @map("subtopic_id")
+  questionText    String    @map("question_text") @db.Text
+  options         Json
+  correctAnswer   String    @map("correct_answer")
+  difficultyLevel Int       @map("difficulty_level")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  createdBy       BigInt    @map("created_by")
+  active          Boolean   @default(true)
+  subtopic        Subtopic  @relation(fields: [subtopicId], references: [id])
+  creator         User      @relation(fields: [createdBy], references: [id])
+
+  @@index([difficultyLevel])
+  @@map("questions")
+}
+
+model TestTemplate {
+  id            BigInt     @id @default(autoincrement()) @map("template_id")
+  name          String     @map("template_name")
+  source        Source
+  createdBy     BigInt     @map("created_by")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  boardId       Int        @map("board_id")
+  testType      TestType   @map("test_type")
+  timingType    TimingType @map("timing_type")
+  timeLimit     Int?       @map("time_limit")
+  configuration Json
+  active        Boolean    @default(true)
+  creator       User       @relation("CreatedBy", fields: [createdBy], references: [id])
+  examBoard     ExamBoard  @relation(fields: [boardId], references: [id])
+  testPlans     TestPlan[]
+
+  @@index([source])
+  @@map("test_templates")
+}
+
+model TestPlan {
+  id            BigInt          @id @default(autoincrement()) @map("test_plan_id")
+  templateId    BigInt?         @map("template_id")
+  boardId       Int             @map("board_id")
+  testType      TestType        @map("test_type")
+  timingType    TimingType      @map("timing_type")
+  timeLimit     Int?            @map("time_limit")
+  studentId     BigInt          @map("student_id")
+  plannedBy     BigInt          @map("planned_by")
+  plannedAt     DateTime        @default(now()) @map("planned_at")
+  configuration Json
+  template      TestTemplate?   @relation(fields: [templateId], references: [id])
+  examBoard     ExamBoard      @relation(fields: [boardId], references: [id])
+  student       User           @relation("StudentTests", fields: [studentId], references: [id])
+  planner       User           @relation("PlannedBy", fields: [plannedBy], references: [id])
+  executions    TestExecution[]
+
+  @@index([studentId])
+  @@map("test_plans")
+}
+
+model TestExecution {
+  id          BigInt           @id @default(autoincrement()) @map("execution_id")
+  testPlanId  BigInt          @map("test_plan_id")
+  status      ExecutionStatus
+  startedAt   DateTime?       @map("started_at")
+  completedAt DateTime?       @map("completed_at")
+  testData    Json           @map("test_data")
+  score       Int?
+  testPlan    TestPlan       @relation(fields: [testPlanId], references: [id])
+
+  @@index([status])
+  @@map("test_executions")
+}
+
+enum InputType {
+  NUMERIC
+  MCQ
+}
+
+enum Source {
+  SYSTEM
+  USER
+}
+
+enum TestType {
+  TOPIC
+  MIXED
+  MENTAL_ARITHMETIC
+}
+
+enum TimingType {
+  TIMED
+  UNTIMED
+}
+
+enum ExecutionStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
