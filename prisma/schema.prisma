@@ -17,17 +17,21 @@ model exam_boards {
 }
 
 model questions {
-  question_id      BigInt    @id @default(autoincrement())
-  subtopic_id      Int
-  question_text    String    @db.Text
-  options          String    @db.LongText
-  correct_answer   String    @db.VarChar(255)
-  difficulty_level Int       @db.TinyInt
-  created_at       DateTime? @default(now()) @db.Timestamp(0)
-  created_by       BigInt
-  active           Boolean?  @default(true)
-  subtopics        subtopics @relation(fields: [subtopic_id], references: [subtopic_id], onUpdate: Restrict, map: "questions_ibfk_1")
-  users            users     @relation(fields: [created_by], references: [user_id], onUpdate: Restrict, map: "questions_ibfk_2")
+  question_id          BigInt    @id @default(autoincrement())
+  subtopic_id          Int
+  question_text        String    @db.Text
+  question_text_plain  String    @db.Text
+  options              String    @db.LongText
+  correct_answer       String    @db.VarChar(255)
+  correct_answer_plain String    @db.VarChar(255)
+  solution             String    @db.Text
+  solution_plain       String    @db.Text
+  difficulty_level     Int       @db.TinyInt
+  created_at           DateTime? @default(now()) @db.Timestamp(0)
+  created_by           BigInt
+  active               Boolean?  @default(true)
+  subtopics            subtopics @relation(fields: [subtopic_id], references: [subtopic_id], onUpdate: Restrict, map: "questions_ibfk_1")
+  users                users     @relation(fields: [created_by], references: [user_id], onUpdate: Restrict, map: "questions_ibfk_2")
 
   @@index([created_by], map: "created_by")
   @@index([difficulty_level], map: "idx_questions_difficulty")
@@ -152,6 +156,18 @@ model users {
   test_plans_test_plans_planned_byTousers test_plans[]     @relation("test_plans_planned_byTousers")
   test_templates                          test_templates[]
   user_roles                              user_roles[]
+}
+
+model difficulty_levels {
+  level_id        Int       @id @default(autoincrement())
+  level_name      String    @unique(map: "level_name") @db.VarChar(50)
+  level_value     Int       @unique(map: "level_value")
+  purpose         String    @db.Text
+  characteristics String    @db.Text
+  focus_area      String    @db.Text
+  steps_required  String?   @db.VarChar(50)
+  created_at      DateTime? @default(now()) @db.Timestamp(0)
+  active          Boolean?  @default(true)
 }
 
 enum test_executions_status {
