@@ -19,10 +19,54 @@ const options = {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          bearerFormat: 'JWT',
+          bearerFormat: 'JWT'
+        }
+      },
+      responses: {
+        UnauthorizedError: {
+          description: 'Access token is missing or invalid',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: {
+                    type: 'string',
+                    example: 'Unauthorized'
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'Authentication required'
+                  }
+                }
+              }
+            }
+          }
         },
       },
       schemas: {
+        LoginResponse: {
+          type: 'object',
+          properties: {
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                firstName: { type: 'string', nullable: true },
+                lastName: { type: 'string', nullable: true },
+                roles: { 
+                  type: 'array',
+                  items: { type: 'string' }
+                }
+              }
+            },
+            token: { 
+              type: 'string',
+              description: 'JWT token to be used for authentication'
+            }
+          }
+        },
         Subject: {
           type: 'object',
           properties: {

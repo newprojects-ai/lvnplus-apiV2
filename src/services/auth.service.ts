@@ -98,15 +98,23 @@ export class AuthService {
   private generateToken(user: any): string {
     const roles = user.user_roles.map((ur: any) => ur.roles.role_name);
     
-    return jwt.sign(
-      {
-        userId: user.user_id.toString(),
-        email: user.email,
-        roles,
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: '24h' }
-    );
+    try {
+      return jwt.sign(
+        {
+          userId: user.user_id.toString(),
+          email: user.email,
+          roles,
+        },
+        process.env.JWT_SECRET!,
+        { 
+          expiresIn: '24h',
+          algorithm: 'HS256'
+        }
+      );
+    } catch (error) {
+      console.error('Error generating token:', error);
+      throw new Error('Failed to generate authentication token');
+    }
   }
 
   private formatUserResponse(user: any) {

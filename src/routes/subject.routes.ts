@@ -20,6 +20,7 @@ const router = Router();
  *     tags: [Subjects]
  *     security:
  *       - bearerAuth: []
+ *     description: Retrieve all subjects. Requires authentication.
  *     responses:
  *       200:
  *         description: List of subjects
@@ -29,6 +30,8 @@ const router = Router();
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Subject'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.get('/', authenticate, getSubjects);
 

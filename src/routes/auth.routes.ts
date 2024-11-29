@@ -65,19 +65,19 @@ router.post('/register', validateRegistration, register);
  *               password:
  *                 type: string
  *     responses:
- *       200:
+ *       "200":
  *         description: Login successful
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 token:
- *                   type: string
- *                 user:
- *                   type: object
- *       401:
- *         description: Invalid credentials
+ *               $ref: '#/components/schemas/LoginResponse'
+ *         headers:
+ *           Set-Cookie:
+ *             schema:
+ *               type: string
+ *               example: token=abcde12345; HttpOnly; Secure; SameSite=Strict
+ *       "401":
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.post('/login', validateLogin, login);
 
@@ -93,7 +93,7 @@ router.post('/login', validateLogin, login);
  *       200:
  *         description: Logout successful
  *       401:
- *         description: Not authenticated
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.post('/logout', authenticate, logout);
 
