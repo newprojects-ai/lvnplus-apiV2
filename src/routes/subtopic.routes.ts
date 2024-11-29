@@ -12,8 +12,7 @@ import { validateSubtopicCreation, validateSubtopicUpdate } from '../middleware/
 const router = Router();
 
 /**
- * @swagger
- * /topics/{topicId}/subtopics:
+ * /subtopics/topic/{topicId}:
  *   get:
  *     summary: Get all subtopics for a topic
  *     tags: [Subtopics]
@@ -35,11 +34,10 @@ const router = Router();
  *               items:
  *                 $ref: '#/components/schemas/Subtopic'
  */
-router.get('/:topicId/subtopics', authenticate, getSubtopics);
+router.get('/topic/:topicId', authenticate, getSubtopics);
 
 /**
- * @swagger
- * /topics/{topicId}/subtopics:
+ * /subtopics:
  *   post:
  *     summary: Create a new subtopic
  *     tags: [Subtopics]
@@ -77,7 +75,6 @@ router.post(
 );
 
 /**
- * @swagger
  * /subtopics/{id}:
  *   put:
  *     summary: Update a subtopic
@@ -114,7 +111,6 @@ router.put(
 );
 
 /**
- * @swagger
  * /subtopics/{id}:
  *   delete:
  *     summary: Delete a subtopic
