@@ -11,6 +11,8 @@ import { notFoundHandler } from './middleware/notFoundHandler';
 import authRoutes from './routes/auth.routes';
 import templateRoutes from './routes/template.routes';
 import testRoutes from './routes/test.routes';
+import subjectRoutes from './routes/subject.routes';
+import subtopicRoutes from './routes/subtopic.routes';
 import testPlanRoutes from './routes/testPlan.routes';
 import executionRoutes from './routes/execution.routes';
 
@@ -35,6 +37,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/subjects', subjectRoutes);
+app.use('/api/topics', subtopicRoutes);
 app.use('/api/tests', testRoutes);
 app.use('/api/test-plans', testPlanRoutes);
 app.use('/api/executions', executionRoutes);

@@ -13,6 +13,16 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const subjectSchema = z.object({
+  subjectName: z.string().min(1),
+  description: z.string().optional(),
+});
+
+const subtopicSchema = z.object({
+  subtopicName: z.string().min(1),
+  description: z.string().optional(),
+});
+
 const templateSchema = z.object({
   templateName: z.string().min(1),
   boardId: z.number(),
@@ -80,6 +90,70 @@ export const validateLogin = (
 ) => {
   try {
     loginSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateSubjectCreation = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    subjectSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateSubjectUpdate = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    subjectSchema.partial().parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateSubtopicCreation = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    subtopicSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateSubtopicUpdate = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    subtopicSchema.partial().parse(req.body);
     next();
   } catch (error) {
     res.status(400).json({

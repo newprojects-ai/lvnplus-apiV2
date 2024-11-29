@@ -126,3 +126,56 @@ export interface UpdateExecutionDTO {
     timeSpent: number;
   };
 }
+
+export interface CreateSubjectDTO {
+  subjectName: string;
+  description?: string;
+}
+
+export interface UpdateSubjectDTO {
+  subjectName?: string;
+  description?: string;
+}
+
+export interface SubjectResponse {
+  id: number;
+  name: string;
+  description: string | null;
+  topics: {
+    id: number;
+    name: string;
+    description: string | null;
+  }[];
+}
+
+export interface CreateSubtopicDTO {
+  topicId: number;
+  subtopicName: string;
+  description?: string;
+}
+
+export interface UpdateSubtopicDTO {
+  subtopicName?: string;
+  description?: string;
+}
+
+export interface SubtopicResponse {
+  id: number;
+  name: string;
+  description: string | null;
+  topic: {
+    id: number;
+    name: string;
+    subject: {
+      id: number;
+      name: string;
+    };
+  };
+}
+
+export interface RegisterUserDTO {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}

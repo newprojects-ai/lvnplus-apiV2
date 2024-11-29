@@ -51,36 +51,48 @@ export class AuthService {
   }
 
   async login(credentials: LoginUserDTO): Promise<AuthResponse> {
-    const user = await prisma.users.findUnique({
-      where: { email: credentials.email },
-      include: {
-        user_roles: {
-          include: {
-            roles: true,
+    try {
+      const user = await prisma.users.findUnique({
+        where: { email: credentials.email },
+        include: {
+          user_roles: {
+            include: {
+              roles: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!user) {
-      throw new UnauthorizedError('Invalid credentials');
+      if (!user) {
+        throw new UnauthorizedError('Invalid email or password');
+      }
+
+      if (!user.active) {
+        throw new UnauthorizedError('Account is inactive');
+      }
+
+      const isValidPassword = await bcrypt.compare(
+        credentials.password,
+        user.password_hash
+      );
+
+      if (!isValidPassword) {
+        throw new UnauthorizedError('Invalid email or password');
+      }
+
+      const token = this.generateToken(user);
+
+      return {
+        user: this.formatUserResponse(user),
+        token,
+      };
+    } catch (error) {
+      console.error('Login error:', {
+        email: credentials.email,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
     }
-
-    const isValidPassword = await bcrypt.compare(
-      credentials.password,
-      user.password_hash
-    );
-
-    if (!isValidPassword) {
-      throw new UnauthorizedError('Invalid credentials');
-    }
-
-    const token = this.generateToken(user);
-
-    return {
-      user: this.formatUserResponse(user),
-      token,
-    };
   }
 
   private generateToken(user: any): string {
