@@ -13,43 +13,50 @@ const router = Router();
 
 /**
  * @swagger
- * /subtopics/topic/{topicId}:
+ * /topics/{topicId}/subtopics:
  *   get:
  *     summary: Get all subtopics for a topic
  *     tags: [Subtopics]
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - subtopicName
- *               - topicId
- *             properties:
- *               topicId:
- *                 type: integer
- *                 description: ID of the parent topic
- *               subtopicName:
- *                 type: string
- *               description:
- *                 type: string
+ *     parameters:
+ *       - in: path
+ *         name: topicId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the topic
  *     responses:
- *       201:
- *         description: Subtopic created successfully
+ *       200:
+ *         description: List of subtopics for the topic
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Subtopic'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
  */
-router.get('/topic/:topicId', authenticate, getSubtopics);
+router.get('/topics/:topicId/subtopics', authenticate, getSubtopics);
 
 /**
  * @swagger
- * /subtopics:
+ * /topics/{topicId}/subtopics:
  *   post:
  *     summary: Create a new subtopic
  *     tags: [Subtopics]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: topicId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the parent topic
  *     requestBody:
  *       required: true
  *       content:
@@ -58,11 +65,7 @@ router.get('/topic/:topicId', authenticate, getSubtopics);
  *             type: object
  *             required:
  *               - subtopicName
- *               - topicId
  *             properties:
- *               topicId:
- *                 type: integer
- *                 description: ID of the parent topic
  *               subtopicName:
  *                 type: string
  *               description:
@@ -70,14 +73,16 @@ router.get('/topic/:topicId', authenticate, getSubtopics);
  *     responses:
  *       201:
  *         description: Subtopic created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Subtopic'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
  */
-router.post(
-  '/',
-  authenticate,
-  checkRole(['ADMIN']),
-  validateSubtopicCreation,
-  createSubtopic
-);
+router.post('/topics/:topicId/subtopics', authenticate, checkRole(['ADMIN']), validateSubtopicCreation, createSubtopic);
 
 /**
  * @swagger
@@ -93,6 +98,7 @@ router.post(
  *         required: true
  *         schema:
  *           type: integer
+ *         description: ID of the subtopic to update
  *     requestBody:
  *       required: true
  *       content:
@@ -107,9 +113,17 @@ router.post(
  *     responses:
  *       200:
  *         description: Subtopic updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Subtopic'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
  */
 router.put(
-  '/:id',
+  '/subtopics/:id',
   authenticate,
   checkRole(['ADMIN']),
   validateSubtopicUpdate,
@@ -130,12 +144,17 @@ router.put(
  *         required: true
  *         schema:
  *           type: integer
+ *         description: ID of the subtopic to delete
  *     responses:
  *       200:
  *         description: Subtopic deleted successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
  */
 router.delete(
-  '/:id',
+  '/subtopics/:id',
   authenticate,
   checkRole(['ADMIN']),
   deleteSubtopic

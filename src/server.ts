@@ -40,7 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/topics', topicRoutes);
-app.use('/api/subtopics', subtopicRoutes);
+app.use('/api', subtopicRoutes);
 app.use('/api/tests', testRoutes);
 app.use('/api/test-plans', testPlanRoutes);
 app.use('/api/executions', executionRoutes);
