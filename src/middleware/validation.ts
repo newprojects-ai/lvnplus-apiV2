@@ -18,6 +18,11 @@ const subjectSchema = z.object({
   description: z.string().optional(),
 });
 
+const topicSchema = z.object({
+  topicName: z.string().min(1),
+  description: z.string().optional(),
+});
+
 const subtopicSchema = z.object({
   subtopicName: z.string().min(1),
   description: z.string().optional(),
@@ -122,6 +127,38 @@ export const validateSubjectUpdate = (
 ) => {
   try {
     subjectSchema.partial().parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateTopicCreation = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    topicSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateTopicUpdate = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    topicSchema.partial().parse(req.body);
     next();
   } catch (error) {
     res.status(400).json({

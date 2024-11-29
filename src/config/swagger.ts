@@ -23,6 +23,73 @@ const options = {
         },
       },
       schemas: {
+        Subject: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            topics: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        Topic: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            subject: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+              },
+            },
+            subtopics: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        Subtopic: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            topic: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                subject: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer' },
+                    name: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
         Template: {
           type: 'object',
           properties: {
@@ -159,8 +226,22 @@ const options = {
         Error: {
           type: 'object',
           properties: {
-            error: { type: 'string' },
+            error: {
+              type: 'string',
+              enum: ['Validation Error', 'Not Found', 'Unauthorized', 'Internal server error'],
+            },
             message: { type: 'string' },
+            details: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  field: { type: 'string' },
+                  message: { type: 'string' },
+                },
+              },
+              nullable: true,
+            },
           },
         },
       },
@@ -168,6 +249,9 @@ const options = {
     security: [{ bearerAuth: [] }],
     tags: [
       { name: 'Authentication', description: 'User authentication endpoints' },
+      { name: 'Subjects', description: 'Subject management' },
+      { name: 'Topics', description: 'Topic management' },
+      { name: 'Subtopics', description: 'Subtopic management' },
       { name: 'Templates', description: 'Test template management' },
       { name: 'Test Plans', description: 'Test plan management' },
       { name: 'Test Executions', description: 'Test execution and responses' },

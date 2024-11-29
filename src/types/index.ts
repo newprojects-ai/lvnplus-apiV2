@@ -148,6 +148,32 @@ export interface SubjectResponse {
   }[];
 }
 
+export interface CreateTopicDTO {
+  subjectId: number;
+  topicName: string;
+  description?: string;
+}
+
+export interface UpdateTopicDTO {
+  topicName?: string;
+  description?: string;
+}
+
+export interface TopicResponse {
+  id: number;
+  name: string;
+  description: string | null;
+  subject: {
+    id: number;
+    name: string;
+  };
+  subtopics: {
+    id: number;
+    name: string;
+    description: string | null;
+  }[];
+}
+
 export interface CreateSubtopicDTO {
   topicId: number;
   subtopicName: string;

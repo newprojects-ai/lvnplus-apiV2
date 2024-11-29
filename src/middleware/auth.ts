@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
-import { UnauthorizedError } from '../utils/errors';
+import { UnauthorizedError, ValidationError } from '../utils/errors';
 
 declare global {
   namespace Express {
@@ -22,12 +22,26 @@ export const authenticate = async (
 ) => {
   try {
     const token = extractToken(req);
-    
     if (!token) {
       throw new UnauthorizedError('Authentication required');
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    if (!process.env.JWT_SECRET) {
+      throw new ValidationError('JWT_SECRET is not configured');
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET) as any;
+    } catch (error) {
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new UnauthorizedError('Invalid token');
+      } else if (error instanceof jwt.TokenExpiredError) {
+        throw new UnauthorizedError('Token expired');
+      } else {
+        throw new UnauthorizedError('Token validation failed');
+      }
+    }
 
     const user = await prisma.users.findUnique({
       where: { user_id: BigInt(decoded.userId) },
@@ -41,7 +55,11 @@ export const authenticate = async (
     });
 
     if (!user) {
-      throw new UnauthorizedError('User not found');
+      throw new UnauthorizedError('Invalid token - User not found');
+    }
+
+    if (!user.active) {
+      throw new UnauthorizedError('Account is inactive');
     }
 
     req.user = {
@@ -52,20 +70,17 @@ export const authenticate = async (
 
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      next(new UnauthorizedError('Invalid token'));
-    } else {
-      next(error);
-    }
+    next(error);
   }
 };
 
 function extractToken(req: Request): string | null {
   const authHeader = req.headers.authorization;
   
-  if (authHeader?.startsWith('Bearer ')) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
   
-  return req.cookies?.token || null;
+  const cookieToken = req.cookies?.token;
+  return cookieToken || null;
 }
