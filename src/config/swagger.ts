@@ -23,6 +23,81 @@ const options = {
         },
       },
       schemas: {
+        Question: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'bigint' },
+            questionText: { type: 'string' },
+            questionTextPlain: { type: 'string' },
+            options: { 
+              type: 'array',
+              items: { type: 'string' }
+            },
+            correctAnswer: { type: 'string' },
+            correctAnswerPlain: { type: 'string' },
+            solution: { type: 'string' },
+            solutionPlain: { type: 'string' },
+            difficultyLevel: { type: 'integer', minimum: 1, maximum: 3 },
+            subtopic: {
+              $ref: '#/components/schemas/Subtopic'
+            },
+            creator: {
+              $ref: '#/components/schemas/User'
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        Subtopic: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            topic: {
+              $ref: '#/components/schemas/Topic'
+            },
+          },
+        },
+        Topic: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            subject: {
+              $ref: '#/components/schemas/Subject'
+            },
+          },
+        },
+        Subject: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string', nullable: true },
+          },
+        },
+        User: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'bigint' },
+            email: { type: 'string', format: 'email' },
+            firstName: { type: 'string', nullable: true },
+            lastName: { type: 'string', nullable: true },
+          },
+        },
+        DifficultyLevel: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            value: { type: 'integer' },
+            purpose: { type: 'string' },
+            characteristics: { type: 'string' },
+            focusArea: { type: 'string' },
+            stepsRequired: { type: 'string', nullable: true },
+          },
+        },
         Template: {
           type: 'object',
           properties: {
@@ -149,7 +224,7 @@ const options = {
             testData: {
               type: 'object',
               properties: {
-                questions: { type: 'array', items: { type: 'object' } },
+                questions: { type: 'array', items: { $ref: '#/components/schemas/Question' } },
                 responses: { type: 'array', items: { type: 'object' } },
                 timing: { type: 'array', items: { type: 'object' } },
               },
@@ -168,6 +243,7 @@ const options = {
     security: [{ bearerAuth: [] }],
     tags: [
       { name: 'Authentication', description: 'User authentication endpoints' },
+      { name: 'Questions', description: 'Question management' },
       { name: 'Templates', description: 'Test template management' },
       { name: 'Test Plans', description: 'Test plan management' },
       { name: 'Test Executions', description: 'Test execution and responses' },
