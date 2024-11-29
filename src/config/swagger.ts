@@ -19,7 +19,8 @@ const options = {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          bearerFormat: 'JWT'
+          bearerFormat: 'JWT',
+          description: 'Enter your JWT token in the format: Bearer <token>'
         }
       },
       responses: {
@@ -30,19 +31,51 @@ const options = {
               schema: {
                 type: 'object',
                 properties: {
-                  error: {
-                    type: 'string',
-                    example: 'Unauthorized'
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'Authentication required'
+                  error: { type: 'string', example: 'Unauthorized' },
+                  message: { type: 'string', example: 'Authentication required' }
+                }
+              }
+            }
+          }
+        },
+        ValidationError: {
+          description: 'Invalid input data',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'Validation Error' },
+                  message: { type: 'string' },
+                  details: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        field: { type: 'string' },
+                        message: { type: 'string' }
+                      }
+                    }
                   }
                 }
               }
             }
           }
         },
+        NotFoundError: {
+          description: 'Resource not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'Not Found' },
+                  message: { type: 'string' }
+                }
+              }
+            }
+          }
+        }
       },
       schemas: {
         LoginResponse: {
@@ -298,10 +331,9 @@ const options = {
       { name: 'Subtopics', description: 'Subtopic management' },
       { name: 'Templates', description: 'Test template management' },
       { name: 'Test Plans', description: 'Test plan management' },
-      { name: 'Test Executions', description: 'Test execution and responses' },
-    ],
+      { name: 'Test Executions', description: 'Test execution and responses' }
+    ]
   },
   apis: ['./src/routes/*.ts'],
-};
-
+}
 export const specs = swaggerJsdoc(options);

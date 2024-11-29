@@ -36,10 +36,14 @@ const router = Router();
  *     responses:
  *       201:
  *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
  *       400:
- *         description: Invalid input data
+ *         $ref: '#/components/responses/ValidationError'
  *       409:
- *         description: Email already exists
+ *         $ref: '#/components/responses/ValidationError'
  */
 router.post('/register', validateRegistration, register);
 
@@ -71,13 +75,10 @@ router.post('/register', validateRegistration, register);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/LoginResponse'
- *         headers:
- *           Set-Cookie:
- *             schema:
- *               type: string
- *               example: token=abcde12345; HttpOnly; Secure; SameSite=Strict
  *       "401":
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       "400":
+ *         $ref: '#/components/responses/ValidationError'
  */
 router.post('/login', validateLogin, login);
 
