@@ -93,23 +93,27 @@ export const filterQuestions = async (
   next: NextFunction
 ) => {
   try {
-    const {
-      topicId,
-      subtopicId,
-      difficulty,
-      examBoard,
-      limit,
-      offset,
-    } = req.query;
-    
+    const filters = {
+      topicId: req.query.topicId ? parseInt(req.query.topicId as string) : undefined,
+      subtopicId: req.query.subtopicId ? parseInt(req.query.subtopicId as string) : undefined,
+      difficulty: req.query.difficulty ? parseInt(req.query.difficulty as string) : undefined,
+      examBoard: req.query.examBoard ? parseInt(req.query.examBoard as string) : undefined,
+      limit: Math.min(parseInt(req.query.limit as string) || 20, 100),
+      offset: parseInt(req.query.offset as string) || 0,
+    };
+
+    // Validate difficulty range
+    if (filters.difficulty !== undefined && (filters.difficulty < 0 || filters.difficulty > 5)) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Difficulty must be between 0 and 5',
+      });
+    }
+
     const questions = await questionService.filterQuestions({
-      topicId: topicId ? parseInt(topicId as string) : undefined,
-      subtopicId: subtopicId ? parseInt(subtopicId as string) : undefined,
-      difficulty: difficulty ? parseInt(difficulty as string) : undefined,
-      examBoard: examBoard ? parseInt(examBoard as string) : undefined,
-      limit: limit ? parseInt(limit as string) : 20,
-      offset: offset ? parseInt(offset as string) : 0,
+      ...filters,
     });
+
     res.json(questions);
   } catch (error) {
     next(error);
@@ -148,9 +152,32 @@ export const getRandomQuestions = async (
       subtopicIds,
     } = req.query;
     
+    if (!count) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Count parameter is required'
+      });
+    }
+
+    const parsedCount = parseInt(count as string);
+    if (isNaN(parsedCount) || parsedCount < 1 || parsedCount > 50) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Count must be between 1 and 50'
+      });
+    }
+
+    const parsedDifficulty = difficulty ? parseInt(difficulty as string) : undefined;
+    if (parsedDifficulty !== undefined && (isNaN(parsedDifficulty) || parsedDifficulty < 0 || parsedDifficulty > 5)) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Difficulty must be between 0 and 5'
+      });
+    }
+    
     const questions = await questionService.getRandomQuestions({
-      count: parseInt(count as string),
-      difficulty: difficulty ? parseInt(difficulty as string) : undefined,
+      count: parsedCount,
+      difficulty: parsedDifficulty,
       topicIds: topicIds ? (topicIds as string).split(',').map(Number) : undefined,
       subtopicIds: subtopicIds ? (subtopicIds as string).split(',').map(Number) : undefined,
     });

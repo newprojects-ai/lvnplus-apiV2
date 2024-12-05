@@ -16,6 +16,7 @@ import subjectRoutes from './routes/subject.routes';
 import subtopicRoutes from './routes/subtopic.routes';
 import testPlanRoutes from './routes/testPlan.routes';
 import executionRoutes from './routes/execution.routes';
+import questionRoutes from './routes/question.routes';
 
 config();
 
@@ -24,10 +25,8 @@ const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(helmet());
 app.use(morgan('dev'));
@@ -46,6 +45,7 @@ app.use('/api', subtopicRoutes);
 app.use('/api/tests', testRoutes);
 app.use('/api/test-plans', testPlanRoutes);
 app.use('/api/executions', executionRoutes);
+app.use('/api/questions', questionRoutes);
 
 // Error handling
 app.use(notFoundHandler);

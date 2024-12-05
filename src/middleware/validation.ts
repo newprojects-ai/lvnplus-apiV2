@@ -72,6 +72,22 @@ const executionUpdateSchema = z.object({
   }).optional(),
 });
 
+const questionSchema = z.object({
+  subtopicId: z.number(),
+  questionText: z.string().min(1),
+  questionTextPlain: z.string().min(1),
+  options: z.string(),
+  correctAnswer: z.string().min(1),
+  correctAnswerPlain: z.string().min(1),
+  solution: z.string(),
+  solutionPlain: z.string(),
+  difficultyLevel: z.number().min(0).max(5),
+});
+
+const bulkQuestionSchema = z.object({
+  questions: z.array(questionSchema),
+});
+
 export const validateRegistration = (
   req: Request,
   res: Response,
@@ -79,6 +95,54 @@ export const validateRegistration = (
 ) => {
   try {
     registerSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateQuestionCreation = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    questionSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateQuestionUpdate = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    questionSchema.partial().parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateBulkQuestionCreation = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    bulkQuestionSchema.parse(req.body);
     next();
   } catch (error) {
     res.status(400).json({

@@ -199,6 +199,63 @@ export interface SubtopicResponse {
   };
 }
 
+export interface CreateQuestionDTO {
+  subtopicId: number;
+  questionText: string;
+  questionTextPlain: string;
+  options: string;
+  correctAnswer: string;
+  correctAnswerPlain: string;
+  solution: string;
+  solutionPlain: string;
+  difficultyLevel: number;
+}
+
+export interface UpdateQuestionDTO extends Partial<CreateQuestionDTO> {}
+
+export interface QuestionResponse {
+  id: string;
+  questionText: string;
+  options: any;
+  correctAnswer: string;
+  difficultyLevel: number;
+  subtopic: {
+    id: number;
+    name: string;
+    topic: {
+      id: number;
+      name: string;
+      subject: {
+        id: number;
+        name: string;
+      };
+    };
+  };
+  creator: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  createdAt: Date;
+}
+
+export interface QuestionFilters {
+  topicId?: number;
+  subtopicId?: number;
+  difficulty?: number;
+  examBoard?: number;
+  limit: number;
+  offset: number;
+}
+
+export interface RandomQuestionParams {
+  count: number;
+  difficulty?: number;
+  topicIds?: number[];
+  subtopicIds?: number[];
+}
+
 export interface RegisterUserDTO {
   email: string;
   password: string;

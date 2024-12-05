@@ -19,6 +19,90 @@ const router = Router();
 
 /**
  * @swagger
+ * /questions/filter:
+ *   get:
+ *     summary: Filter questions by various criteria
+ *     tags: [Questions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: topicId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: subtopicId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: difficulty
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 5
+ *       - in: query
+ *         name: examBoard
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Filtered list of questions
+ */
+router.get('/filter', authenticate, filterQuestions);
+
+/**
+ * @swagger
+ * /questions/random:
+ *   get:
+ *     summary: Get random questions based on criteria
+ *     tags: [Questions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: count
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *       - in: query
+ *         name: difficulty
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 5
+ *       - in: query
+ *         name: topicIds
+ *         schema:
+ *           type: string
+ *           description: Comma-separated list of topic IDs
+ *       - in: query
+ *         name: subtopicIds
+ *         schema:
+ *           type: string
+ *           description: Comma-separated list of subtopic IDs
+ *     responses:
+ *       200:
+ *         description: Random questions matching criteria
+ */
+router.get('/random', authenticate, getRandomQuestions);
+
+/**
+ * @swagger
  * /questions:
  *   get:
  *     summary: Get all questions with pagination
@@ -64,6 +148,116 @@ const router = Router();
  *                       type: integer
  */
 router.get('/', authenticate, getQuestions);
+
+/**
+ * @swagger
+ * /questions/filter:
+ *   get:
+ *     summary: Filter questions by various criteria
+ *     tags: [Questions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: topicId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: subtopicId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: difficulty
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 5
+ *       - in: query
+ *         name: examBoard
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Filtered list of questions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Question'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ */
+router.get('/filter', authenticate, filterQuestions);
+
+/**
+ * @swagger
+ * /questions/random:
+ *   get:
+ *     summary: Get random questions based on criteria
+ *     tags: [Questions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: count
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *       - in: query
+ *         name: difficulty
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 5
+ *       - in: query
+ *         name: topicIds
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: integer
+ *       - in: query
+ *         name: subtopicIds
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: integer
+ *     responses:
+ *       200:
+ *         description: Random questions matching criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Question'
+ */
+router.get('/random', authenticate, getRandomQuestions);
 
 /**
  * @swagger
@@ -182,70 +376,6 @@ router.delete(
 
 /**
  * @swagger
- * /questions/filter:
- *   get:
- *     summary: Filter questions by various criteria
- *     tags: [Questions]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: topicId
- *         schema:
- *           type: integer
- *       - in: query
- *         name: subtopicId
- *         schema:
- *           type: integer
- *       - in: query
- *         name: difficulty
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 3
- *       - in: query
- *         name: examBoard
- *         schema:
- *           type: integer
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 20
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *           minimum: 0
- *           default: 0
- *     responses:
- *       200:
- *         description: Filtered list of questions
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Question'
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                     offset:
- *                       type: integer
- *                     limit:
- *                       type: integer
- */
-router.get('/filter', authenticate, filterQuestions);
-
-/**
- * @swagger
  * /questions/bulk-create:
  *   post:
  *     summary: Create multiple questions at once
@@ -282,52 +412,6 @@ router.post(
   validateBulkQuestionCreation,
   bulkCreateQuestions
 );
-
-/**
- * @swagger
- * /questions/random:
- *   get:
- *     summary: Get random questions based on criteria
- *     tags: [Questions]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: count
- *         required: true
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *       - in: query
- *         name: difficulty
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 3
- *       - in: query
- *         name: topicIds
- *         schema:
- *           type: array
- *           items:
- *             type: integer
- *       - in: query
- *         name: subtopicIds
- *         schema:
- *           type: array
- *           items:
- *             type: integer
- *     responses:
- *       200:
- *         description: Random questions matching criteria
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Question'
- */
-router.get('/random', authenticate, getRandomQuestions);
 
 /**
  * @swagger

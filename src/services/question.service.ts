@@ -122,59 +122,53 @@ export class QuestionService {
   }
 
   async filterQuestions(filters: QuestionFilters) {
-    const where: Prisma.questionsWhereInput = {
-      active: true,
-    };
+    try {
+      const where: Prisma.questionsWhereInput = {
+        active: true,
+        ...(filters.subtopicId && { subtopic_id: filters.subtopicId }),
+        ...(filters.difficulty !== undefined && { difficulty_level: filters.difficulty })
+      };
 
-    if (filters.topicId) {
-      where.subtopics = {
-        topics: {
-          topic_id: filters.topicId,
+      if (filters.topicId) {
+        where.subtopics = {
+          topics: {
+            topic_id: filters.topicId,
+            ...(filters.examBoard && {
+              subjects: {
+                exam_boards: {
+                  some: {
+                    board_id: filters.examBoard
+                  }
+                }
+              }
+            })
+          }
+        };
+      }
+
+      const [questions, total] = await Promise.all([
+        prisma.questions.findMany({
+          where,
+          include: this.getQuestionIncludes(),
+          skip: filters.offset,
+          take: filters.limit,
+          orderBy: { created_at: 'desc' },
+        }),
+        prisma.questions.count({ where }),
+      ]);
+
+      return {
+        data: questions.map(this.formatQuestionResponse),
+        pagination: {
+          total,
+          offset: filters.offset,
+          limit: filters.limit,
         },
       };
+    } catch (error) {
+      console.error('Error in filterQuestions:', error);
+      throw error;
     }
-
-    if (filters.subtopicId) {
-      where.subtopic_id = filters.subtopicId;
-    }
-
-    if (filters.difficulty) {
-      where.difficulty_level = filters.difficulty;
-    }
-
-    if (filters.examBoard) {
-      where.subtopics = {
-        topics: {
-          subjects: {
-            exam_boards: {
-              some: {
-                board_id: filters.examBoard,
-              },
-            },
-          },
-        },
-      };
-    }
-
-    const [questions, total] = await Promise.all([
-      prisma.questions.findMany({
-        where,
-        include: this.getQuestionIncludes(),
-        skip: filters.offset,
-        take: filters.limit,
-        orderBy: { created_at: 'desc' },
-      }),
-      prisma.questions.count({ where }),
-    ]);
-
-    return {
-      data: questions.map(this.formatQuestionResponse),
-      pagination: {
-        total,
-        offset: filters.offset,
-        limit: filters.limit,
-      },
-    };
   }
 
   async bulkCreateQuestions(
@@ -201,34 +195,45 @@ export class QuestionService {
   }
 
   async getRandomQuestions(params: RandomQuestionParams) {
-    const where: Prisma.questionsWhereInput = {
-      active: true,
-    };
-
-    if (params.difficulty) {
-      where.difficulty_level = params.difficulty;
-    }
-
-    if (params.topicIds?.length) {
-      where.subtopics = {
-        topics: {
-          topic_id: { in: params.topicIds },
-        },
+    try {
+      const where: Prisma.questionsWhereInput = {
+        active: true,
+        ...(params.difficulty !== undefined && { difficulty_level: params.difficulty })
       };
+
+      if (params.topicIds?.length) {
+        where.subtopics = {
+          topics: {
+            topic_id: { in: params.topicIds }
+          }
+        };
+      }
+
+      if (params.subtopicIds?.length) {
+        where.subtopic_id = {
+          in: params.subtopicIds
+        };
+      }
+
+      const questions = await prisma.questions.findMany({
+        where,
+        include: this.getQuestionIncludes(),
+        take: params.count,
+        orderBy: {
+          question_id: 'asc'
+        }
+      });
+
+      // Shuffle the results for better randomization
+      const shuffled = questions.sort(() => Math.random() - 0.5);
+
+      // Take only the requested number of questions
+      return shuffled.slice(0, params.count).map(this.formatQuestionResponse);
+
+    } catch (error) {
+      console.error('Error in getRandomQuestions:', error);
+      throw error;
     }
-
-    if (params.subtopicIds?.length) {
-      where.subtopic_id = { in: params.subtopicIds };
-    }
-
-    const questions = await prisma.questions.findMany({
-      where,
-      include: this.getQuestionIncludes(),
-      take: params.count,
-      orderBy: Prisma.sql`RAND()`,
-    });
-
-    return questions.map(this.formatQuestionResponse);
   }
 
   async getTopics() {
