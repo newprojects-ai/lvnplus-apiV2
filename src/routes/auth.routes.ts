@@ -33,6 +33,12 @@ const router = Router();
  *                 type: string
  *               lastName:
  *                 type: string
+ *               roles:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   enum: ['STUDENT', 'TEACHER', 'ADMIN', 'PARENT']
+ *                 description: Array of roles to assign to the user. Defaults to ['STUDENT'] if not provided
  *     responses:
  *       201:
  *         description: User registered successfully

@@ -3,6 +3,7 @@ export interface RegisterUserDTO {
   password: string;
   firstName: string;
   lastName: string;
+  roles?: string[];
 }
 
 export interface LoginUserDTO {

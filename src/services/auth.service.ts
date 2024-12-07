@@ -17,6 +17,9 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
+    // Default role if none provided
+    const roles = data.roles?.length ? data.roles : ['STUDENT'];
+
     const user = await prisma.users.create({
       data: {
         email: data.email,
@@ -24,13 +27,13 @@ export class AuthService {
         first_name: data.firstName,
         last_name: data.lastName,
         user_roles: {
-          create: {
+          create: roles.map(role => ({
             roles: {
               connect: {
-                role_name: 'STUDENT', // Default role
+                role_name: role,
               },
             },
-          },
+          })),
         },
       },
       include: {
