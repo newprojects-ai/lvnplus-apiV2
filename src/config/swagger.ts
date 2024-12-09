@@ -100,6 +100,101 @@ const options = {
             }
           }
         },
+        TestPlanInput: {
+          type: 'object',
+          required: ['boardId', 'testType', 'timingType', 'studentId', 'plannedBy', 'configuration'],
+          properties: {
+            templateId: { type: 'string' },
+            boardId: { type: 'integer' },
+            testType: { 
+              type: 'string',
+              enum: ['TOPIC', 'MIXED', 'MENTAL_ARITHMETIC']
+            },
+            timingType: {
+              type: 'string',
+              enum: ['TIMED', 'UNTIMED']
+            },
+            timeLimit: { type: 'integer' },
+            studentId: { type: 'string' },
+            plannedBy: { type: 'string' },
+            configuration: {
+              type: 'object',
+              required: ['topics', 'subtopics', 'questionCounts'],
+              properties: {
+                topics: {
+                  type: 'array',
+                  items: { type: 'integer' }
+                },
+                subtopics: {
+                  type: 'array',
+                  items: { type: 'integer' }
+                },
+                questionCounts: {
+                  type: 'object',
+                  additionalProperties: { type: 'integer' }
+                }
+              }
+            }
+          }
+        },
+        TestPlan: {
+          type: 'object',
+          properties: {
+            testPlanId: { type: 'string' },
+            templateId: { type: 'string' },
+            boardId: { type: 'integer' },
+            testType: { 
+              type: 'string',
+              enum: ['TOPIC', 'MIXED', 'MENTAL_ARITHMETIC']
+            },
+            timingType: {
+              type: 'string',
+              enum: ['TIMED', 'UNTIMED']
+            },
+            timeLimit: { type: 'integer' },
+            student: {
+              type: 'object',
+              properties: {
+                userId: { type: 'string' },
+                email: { type: 'string' },
+                firstName: { type: 'string' },
+                lastName: { type: 'string' }
+              }
+            },
+            plannedBy: { type: 'string' },
+            plannedAt: { type: 'string', format: 'date-time' },
+            configuration: {
+              type: 'object',
+              properties: {
+                topics: {
+                  type: 'array',
+                  items: { type: 'integer' }
+                },
+                subtopics: {
+                  type: 'array',
+                  items: { type: 'integer' }
+                },
+                questionCounts: {
+                  type: 'object',
+                  additionalProperties: { type: 'integer' }
+                }
+              }
+            },
+            execution: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                status: { 
+                  type: 'string',
+                  enum: ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ABANDONED']
+                },
+                startedAt: { type: 'string', format: 'date-time' },
+                completedAt: { type: 'string', format: 'date-time' },
+                score: { type: 'integer' }
+              }
+            }
+          }
+        },
         Subject: {
           type: 'object',
           properties: {
@@ -240,47 +335,7 @@ const options = {
           },
         },
         TestPlan: {
-          type: 'object',
-          properties: {
-            testPlanId: { type: 'string', format: 'bigint' },
-            testType: { type: 'string', enum: ['TOPIC', 'MIXED', 'MENTAL_ARITHMETIC'] },
-            timingType: { type: 'string', enum: ['TIMED', 'UNTIMED'] },
-            timeLimit: { type: 'integer', nullable: true },
-            student: {
-              type: 'object',
-              properties: {
-                userId: { type: 'string', format: 'bigint' },
-                email: { type: 'string' },
-                firstName: { type: 'string', nullable: true },
-                lastName: { type: 'string', nullable: true },
-              },
-            },
-            configuration: {
-              type: 'object',
-              properties: {
-                topics: { type: 'array', items: { type: 'integer' } },
-                subtopics: { type: 'array', items: { type: 'integer' } },
-                questionCounts: {
-                  type: 'object',
-                  properties: {
-                    easy: { type: 'integer' },
-                    medium: { type: 'integer' },
-                    hard: { type: 'integer' },
-                  },
-                },
-              },
-            },
-            execution: {
-              type: 'object',
-              nullable: true,
-              properties: {
-                status: { type: 'string', enum: ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ABANDONED'] },
-                startedAt: { type: 'string', format: 'date-time', nullable: true },
-                completedAt: { type: 'string', format: 'date-time', nullable: true },
-                score: { type: 'integer', nullable: true },
-              },
-            },
-          },
+          $ref: '#/components/schemas/TestPlan'
         },
         TestExecution: {
           type: 'object',

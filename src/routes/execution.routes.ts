@@ -1,18 +1,43 @@
 import { Router } from 'express';
 import {
   getExecution,
-  startExecution,
+  createExecution,
   submitAnswer,
-  completeExecution,
+  completeTest,
+  pauseTest,
+  resumeTest,
 } from '../controllers/execution.controller';
 import { authenticate } from '../middleware/auth';
-import { validateExecutionUpdate } from '../middleware/validation';
 
 const router = Router();
 
 /**
  * @swagger
- * /executions/{id}:
+ * /tests/plans/{planId}/executions:
+ *   post:
+ *     summary: Create a new test execution
+ *     tags: [Test Executions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: planId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Test execution created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TestExecution'
+ */
+router.post('/plans/:planId/executions', authenticate, createExecution);
+
+/**
+ * @swagger
+ * /tests/executions/{executionId}:
  *   get:
  *     summary: Get a test execution by ID
  *     tags: [Test Executions]
@@ -20,11 +45,10 @@ const router = Router();
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: executionId
  *         required: true
  *         schema:
  *           type: string
- *         description: Test execution ID
  *     responses:
  *       200:
  *         description: Test execution retrieved successfully
@@ -32,90 +56,46 @@ const router = Router();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/TestExecution'
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Test execution not found
  */
-router.get('/:id', authenticate, getExecution);
+router.get('/executions/:executionId', authenticate, getExecution);
 
 /**
  * @swagger
- * /executions/{id}/start:
+ * /tests/executions/{executionId}/answers:
  *   post:
- *     summary: Start a test execution
+ *     summary: Submit an answer for a test
  *     tags: [Test Executions]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: executionId
  *         required: true
  *         schema:
  *           type: string
- *         description: Test execution ID
- *     responses:
- *       200:
- *         description: Test execution started successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/TestExecution'
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Test execution not found
- */
-router.post('/:id/start', authenticate, startExecution);
-
-/**
- * @swagger
- * /executions/{id}/answer:
- *   post:
- *     summary: Submit an answer for a test execution
- *     tags: [Test Executions]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Test execution ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - questionId
+ *               - answer
  *             properties:
- *               response:
- *                 type: object
- *                 properties:
- *                   questionId: 
- *                     type: string
- *                   answer:
- *                     type: string
- *                   timeSpent:
- *                     type: number
+ *               questionId:
+ *                 type: string
+ *               answer:
+ *                 type: string
  *     responses:
- *       200:
+ *       204:
  *         description: Answer submitted successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/TestExecution'
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Test execution not found
  */
-router.post('/:id/answer', authenticate, validateExecutionUpdate, submitAnswer);
+router.post('/executions/:executionId/answers', authenticate, submitAnswer);
 
 /**
  * @swagger
- * /executions/{id}/complete:
+ * /tests/executions/{executionId}/complete:
  *   post:
  *     summary: Complete a test execution
  *     tags: [Test Executions]
@@ -123,23 +103,66 @@ router.post('/:id/answer', authenticate, validateExecutionUpdate, submitAnswer);
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: executionId
  *         required: true
  *         schema:
  *           type: string
- *         description: Test execution ID
  *     responses:
  *       200:
- *         description: Test execution completed successfully
+ *         description: Test completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TestResult'
+ */
+router.post('/executions/:executionId/complete', authenticate, completeTest);
+
+/**
+ * @swagger
+ * /tests/executions/{executionId}/pause:
+ *   post:
+ *     summary: Pause a test execution
+ *     tags: [Test Executions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: executionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Test execution paused successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/TestExecution'
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Test execution not found
  */
-router.post('/:id/complete', authenticate, completeExecution);
+router.post('/executions/:executionId/pause', authenticate, pauseTest);
+
+/**
+ * @swagger
+ * /tests/executions/{executionId}/resume:
+ *   post:
+ *     summary: Resume a test execution
+ *     tags: [Test Executions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: executionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Test execution resumed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TestExecution'
+ */
+router.post('/executions/:executionId/resume', authenticate, resumeTest);
 
 export default router;

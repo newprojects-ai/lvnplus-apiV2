@@ -27,7 +27,7 @@ const router = Router();
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/TestPlan'
+ *             $ref: '#/components/schemas/TestPlanInput'
  *     responses:
  *       201:
  *         description: Test plan created successfully
@@ -102,7 +102,16 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/TestPlan'
+ *             type: object
+ *             allOf:
+ *               - $ref: '#/components/schemas/TestPlanInput'
+ *               - type: object
+ *                 properties:
+ *                   testPlanId:
+ *                     type: string
+ *                   plannedAt:
+ *                     type: string
+ *                     format: date-time
  *     responses:
  *       200:
  *         description: Test plan updated successfully

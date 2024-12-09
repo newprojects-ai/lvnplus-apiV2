@@ -111,24 +111,48 @@ export interface TestPlanResponse {
 
 export interface TestExecutionResponse {
   executionId: bigint;
+  testPlanId: bigint;
   status: string;
   startedAt?: Date;
-  completedAt?: Date;
-  score?: number;
   testData: {
-    questions: any[];
-    responses: any[];
-    timing: any[];
+    questions: Array<{
+      id: number;
+      content: string;
+      options?: string[];
+      topicId: number;
+      subtopicId: number;
+      difficulty: 'easy' | 'medium' | 'hard';
+    }>;
+    responses: Record<string, string>;
+    timingData: {
+      startTime: number;
+      endTime?: number;
+      pausedDuration?: number;
+    };
   };
+  score?: number;
 }
 
-export interface UpdateExecutionDTO {
-  status?: 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED';
-  response?: {
-    questionId: bigint;
-    answer: string;
-    timeSpent: number;
-  };
+export interface SubmitAnswerDTO {
+  questionId: string;
+  answer: string;
+}
+
+export interface TestResultResponse {
+  id: string;
+  testSessionId: string;
+  userId: string;
+  score: number;
+  totalQuestions: number;
+  timeSpent: number;
+  completedAt: string;
+  accuracy: number;
+  topicPerformance: Array<{
+    topicId: string;
+    correct: number;
+    total: number;
+    accuracy: number;
+  }>;
 }
 
 export interface CreateSubjectDTO {
