@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { TestPlanService } from '../services/testPlan.service';
-import { CreateTestPlanDTO } from '../types';
+import { CreateTestPlanDTO, UpdateTestPlanDTO } from '../types';
 
 const testPlanService = new TestPlanService();
 
@@ -27,12 +27,50 @@ export const getTestPlan = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
+    const { planId } = req.params;
     const userId = req.user?.id;
     
-    const testPlan = await testPlanService.getTestPlan(BigInt(id), userId);
+    const testPlan = await testPlanService.getTestPlan(BigInt(planId), userId);
     
     res.json(testPlan);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateTestPlan = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { planId } = req.params;
+    const userId = req.user?.id;
+    const updateData: UpdateTestPlanDTO = req.body;
+    
+    const testPlan = await testPlanService.updateTestPlan(
+      BigInt(planId),
+      userId,
+      updateData
+    );
+    
+    res.json(testPlan);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteTestPlan = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { planId } = req.params;
+    const userId = req.user?.id;
+    
+    await testPlanService.deleteTestPlan(BigInt(planId), userId);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

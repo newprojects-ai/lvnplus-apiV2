@@ -1,6 +1,14 @@
 import { Router } from 'express';
-import { createTestPlan, getTestPlan } from '../controllers/testPlan.controller';
-import { validateTestPlanCreation } from '../middleware/validation';
+import { 
+  createTestPlan, 
+  getTestPlan, 
+  updateTestPlan, 
+  deleteTestPlan 
+} from '../controllers/testPlan.controller';
+import { 
+  validateTestPlanCreation, 
+  validateTestPlanUpdate 
+} from '../middleware/validation';
 import { authenticate } from '../middleware/auth';
 import { checkRole } from '../middleware/roles';
 
@@ -8,7 +16,7 @@ const router = Router();
 
 /**
  * @swagger
- * /test-plans:
+ * /api/tests/plans:
  *   post:
  *     summary: Create a new test plan
  *     tags: [Test Plans]
@@ -44,7 +52,7 @@ router.post(
 
 /**
  * @swagger
- * /test-plans/{id}:
+ * /api/tests/plans/{planId}:
  *   get:
  *     summary: Get a test plan by ID
  *     tags: [Test Plans]
@@ -70,9 +78,66 @@ router.post(
  *         description: Test plan not found
  */
 router.get(
-  '/:id',
+  '/:planId',
   authenticate,
   getTestPlan
+);
+
+/**
+ * @swagger
+ * /api/tests/plans/{planId}:
+ *   patch:
+ *     summary: Update a test plan
+ *     tags: [Test Plans]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: planId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/TestPlan'
+ *     responses:
+ *       200:
+ *         description: Test plan updated successfully
+ */
+router.patch(
+  '/:planId',
+  authenticate,
+  checkRole(['TEACHER', 'PARENT']),
+  validateTestPlanUpdate,
+  updateTestPlan
+);
+
+/**
+ * @swagger
+ * /api/tests/plans/{planId}:
+ *   delete:
+ *     summary: Delete a test plan
+ *     tags: [Test Plans]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: planId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       204:
+ *         description: Test plan deleted successfully
+ */
+router.delete(
+  '/:planId',
+  authenticate,
+  checkRole(['TEACHER', 'PARENT']),
+  deleteTestPlan
 );
 
 export default router;

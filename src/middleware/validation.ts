@@ -53,14 +53,11 @@ const testPlanSchema = z.object({
   timingType: z.enum(['TIMED', 'UNTIMED']),
   timeLimit: z.number().optional(),
   studentId: z.string(),
+  plannedBy: z.string(),
   configuration: z.object({
     topics: z.array(z.number()),
     subtopics: z.array(z.number()),
-    questionCounts: z.object({
-      easy: z.number(),
-      medium: z.number(),
-      hard: z.number(),
-    }),
+    questionCounts: z.record(z.string(), z.number()),
   }),
 });
 
@@ -304,6 +301,22 @@ export const validateTestPlanCreation = (
 ) => {
   try {
     testPlanSchema.parse(req.body);
+    next();
+  } catch (error) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: error.errors,
+    });
+  }
+};
+
+export const validateTestPlanUpdate = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    testPlanSchema.partial().parse(req.body);
     next();
   } catch (error) {
     res.status(400).json({

@@ -75,19 +75,20 @@ export interface CreateTestPlanDTO {
   timingType: 'TIMED' | 'UNTIMED';
   timeLimit?: number;
   studentId: bigint;
+  plannedBy: bigint;
   configuration: {
     topics: number[];
     subtopics: number[];
-    questionCounts: {
-      easy: number;
-      medium: number;
-      hard: number;
-    };
+    questionCounts: Record<string, number>;
   };
 }
 
+export interface UpdateTestPlanDTO extends Partial<CreateTestPlanDTO> {}
+
 export interface TestPlanResponse {
   testPlanId: bigint;
+  templateId?: bigint;
+  boardId: number;
   testType: string;
   timingType: string;
   timeLimit?: number;
@@ -97,6 +98,8 @@ export interface TestPlanResponse {
     firstName?: string;
     lastName?: string;
   };
+  plannedBy: bigint;
+  plannedAt: Date;
   configuration: any;
   execution?: {
     status: string;

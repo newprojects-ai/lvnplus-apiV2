@@ -38,3 +38,12 @@ The project follows a modular architecture with:
 - Updated difficulty level validation to use correct range (0-5)
 - Modified Swagger documentation to reflect new difficulty range
 - Updated validation schema for question creation and updates
+
+### Test Plan API Updates
+- Updated Test Plan routes to follow RESTful conventions
+- Added PATCH and DELETE endpoints for test plans
+- Modified test plan schema to support flexible question counts
+- Added plannedBy and plannedAt fields to test plan responses
+- Enhanced validation for test plan updates
+- Improved error handling and access control for test plan operations
+- Updated types to reflect new API requirements

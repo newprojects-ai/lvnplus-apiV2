@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
-import { CreateTestPlanDTO, TestPlanResponse } from '../types';
+import { CreateTestPlanDTO, UpdateTestPlanDTO, TestPlanResponse } from '../types';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors';
 
 export class TestPlanService {
@@ -15,8 +15,8 @@ export class TestPlanService {
         test_type: data.testType,
         timing_type: data.timingType,
         time_limit: data.timeLimit,
-        student_id: data.studentId,
-        planned_by: plannerId,
+        student_id: BigInt(data.studentId),
+        planned_by: BigInt(data.plannedBy),
         configuration: JSON.stringify(data.configuration),
       },
       include: {
@@ -104,6 +104,79 @@ export class TestPlanService {
     }
 
     return this.formatTestPlanResponse(testPlan);
+  }
+
+  async updateTestPlan(
+    testPlanId: bigint,
+    userId: bigint,
+    data: UpdateTestPlanDTO
+  ): Promise<TestPlanResponse> {
+    const testPlan = await this.findTestPlanWithAccess(testPlanId, userId);
+
+    const updatedTestPlan = await prisma.test_plans.update({
+      where: { test_plan_id: testPlanId },
+      data: {
+        ...(data.templateId && { template_id: data.templateId }),
+        ...(data.boardId && { board_id: data.boardId }),
+        ...(data.testType && { test_type: data.testType }),
+        ...(data.timingType && { timing_type: data.timingType }),
+        ...(data.timeLimit !== undefined && { time_limit: data.timeLimit }),
+        ...(data.studentId && { student_id: BigInt(data.studentId) }),
+        ...(data.configuration && { configuration: JSON.stringify(data.configuration) }),
+      },
+      include: this.getTestPlanIncludes(),
+    });
+
+    return this.formatTestPlanResponse(updatedTestPlan);
+  }
+
+  async deleteTestPlan(testPlanId: bigint, userId: bigint): Promise<void> {
+    await this.findTestPlanWithAccess(testPlanId, userId);
+    await prisma.test_plans.delete({
+      where: { test_plan_id: testPlanId },
+    });
+  }
+
+  private async findTestPlanWithAccess(testPlanId: bigint, userId: bigint) {
+    const testPlan = await prisma.test_plans.findUnique({
+      where: { test_plan_id: testPlanId },
+      include: this.getTestPlanIncludes(),
+    });
+
+    if (!testPlan) {
+      throw new NotFoundError('Test plan not found');
+    }
+
+    if (testPlan.planned_by !== userId) {
+      throw new UnauthorizedError('Not authorized to access this test plan');
+    }
+
+    return testPlan;
+  }
+
+  private getTestPlanIncludes() {
+    return {
+      users_test_plans_student_idTousers: {
+        select: {
+          user_id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+        },
+      },
+      test_executions: {
+        select: {
+          status: true,
+          started_at: true,
+          completed_at: true,
+          score: true,
+        },
+        take: 1,
+        orderBy: {
+          execution_id: 'desc',
+        },
+      },
+    };
   }
 
   private async selectQuestions(configuration: CreateTestPlanDTO['configuration']) {
@@ -207,6 +280,8 @@ export class TestPlanService {
   ): TestPlanResponse {
     return {
       testPlanId: testPlan.test_plan_id,
+      templateId: testPlan.template_id,
+      boardId: testPlan.board_id,
       testType: testPlan.test_type,
       timingType: testPlan.timing_type,
       timeLimit: testPlan.time_limit,
@@ -216,6 +291,8 @@ export class TestPlanService {
         firstName: testPlan.users_test_plans_student_idTousers.first_name,
         lastName: testPlan.users_test_plans_student_idTousers.last_name,
       },
+      plannedBy: testPlan.planned_by,
+      plannedAt: testPlan.planned_at,
       configuration: JSON.parse(testPlan.configuration),
       execution: testPlan.test_executions[0] ? {
         status: testPlan.test_executions[0].status,

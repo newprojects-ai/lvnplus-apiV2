@@ -44,8 +44,8 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/topics', topicRoutes);
 app.use('/api', subtopicRoutes);
+app.use('/api/tests/plans', testPlanRoutes);
 app.use('/api/tests', testRoutes);
-app.use('/api/test-plans', testPlanRoutes);
 app.use('/api/executions', executionRoutes);
 app.use('/api/questions', questionRoutes);
 
