@@ -72,3 +72,63 @@ export const completeExecution = async (
     next(error);
   }
 };
+
+export const createExecution = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { planId } = req.params;
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const execution = await executionService.createExecution(BigInt(planId), userId);
+    res.status(201).json(execution);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resumeTest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { executionId } = req.params;
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const execution = await executionService.resumeExecution(BigInt(executionId), userId);
+    res.status(200).json(execution);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const pauseTest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { executionId } = req.params;
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const execution = await executionService.pauseExecution(BigInt(executionId), userId);
+    res.status(200).json(execution);
+  } catch (error) {
+    next(error);
+  }
+};

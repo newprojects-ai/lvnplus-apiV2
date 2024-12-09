@@ -3,7 +3,7 @@ import {
   getExecution,
   createExecution,
   submitAnswer,
-  completeTest,
+  completeExecution,
   pauseTest,
   resumeTest,
 } from '../controllers/execution.controller';
@@ -115,7 +115,7 @@ router.post('/executions/:executionId/answers', authenticate, submitAnswer);
  *             schema:
  *               $ref: '#/components/schemas/TestResult'
  */
-router.post('/executions/:executionId/complete', authenticate, completeTest);
+router.post('/executions/:executionId/complete', authenticate, completeExecution);
 
 /**
  * @swagger

@@ -81,6 +81,85 @@ export class TestExecutionService {
     return this.formatExecutionResponse(updatedExecution);
   }
 
+  async createExecution(
+    planId: bigint,
+    userId: bigint
+  ): Promise<TestExecutionResponse> {
+    // Check if the user has access to the test plan
+    const testPlan = await prisma.test_plans.findUnique({
+      where: { plan_id: planId },
+      include: {
+        users_test_plans_student_idTousers: true,
+        users_test_plans_planned_byTousers: true,
+      },
+    });
+
+    if (!testPlan) {
+      throw new NotFoundError('Test plan not found');
+    }
+
+    // Verify user access to the test plan
+    const studentIds = testPlan.users_test_plans_student_idTousers.map(u => u.id);
+    if (!studentIds.includes(userId)) {
+      throw new UnauthorizedError('You are not authorized to start this test');
+    }
+
+    // Create a new test execution
+    const newExecution = await prisma.test_executions.create({
+      data: {
+        test_plan_id: planId,
+        student_id: userId,
+        status: 'NOT_STARTED',
+        test_data: JSON.stringify({ responses: [] }),
+        created_at: new Date(),
+      },
+    });
+
+    return this.formatExecutionResponse(newExecution);
+  }
+
+  async resumeExecution(
+    executionId: bigint,
+    userId: bigint
+  ): Promise<TestExecutionResponse> {
+    const execution = await this.findExecutionWithAccess(executionId, userId);
+
+    if (execution.status !== 'PAUSED') {
+      throw new ValidationError('Test is not paused');
+    }
+
+    const updatedExecution = await prisma.test_executions.update({
+      where: { execution_id: executionId },
+      data: {
+        status: 'IN_PROGRESS',
+        paused_at: null,
+      },
+    });
+
+    return this.formatExecutionResponse(updatedExecution);
+  }
+
+  async pauseExecution(
+    executionId: bigint,
+    userId: bigint
+  ): Promise<TestExecutionResponse> {
+    const execution = await this.findExecutionWithAccess(executionId, userId);
+
+    if (execution.status !== 'IN_PROGRESS') {
+      throw new ValidationError('Test is not in progress');
+    }
+
+    const updatedExecution = await prisma.test_executions.update({
+      where: { execution_id: executionId },
+      data: {
+        status: 'PAUSED',
+        paused_at: new Date(),
+      },
+    });
+
+    return this.formatExecutionResponse(updatedExecution);
+  }
+
   private async findExecutionWithAccess(executionId: bigint, userId: bigint) {
     const execution = await prisma.test_executions.findUnique({
       where: { execution_id: executionId },
