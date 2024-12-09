@@ -1,7 +1,19 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, test_executions, test_plans } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { TestExecutionResponse, UpdateExecutionDTO } from '../types';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors';
+
+interface ExecutionWithPlan extends test_executions {
+  test_plans: test_plans & {
+    users_test_plans_student_idTousers: { id: bigint }[];
+    users_test_plans_planned_byTousers: { id: bigint }[];
+  };
+}
+
+interface TestData {
+  responses: { questionId: string; answer: string }[];
+  questions: { question_id: string; correct_answer: string }[];
+}
 
 export class TestExecutionService {
   async getExecution(
@@ -44,7 +56,7 @@ export class TestExecutionService {
       throw new ValidationError('Test is not in progress');
     }
 
-    const testData = JSON.parse(execution.test_data);
+    const testData: TestData = JSON.parse(execution.test_data);
     testData.responses.push(updateData.response);
 
     const updatedExecution = await prisma.test_executions.update({
@@ -160,7 +172,7 @@ export class TestExecutionService {
     return this.formatExecutionResponse(updatedExecution);
   }
 
-  private async findExecutionWithAccess(executionId: bigint, userId: bigint) {
+  private async findExecutionWithAccess(executionId: bigint, userId: bigint): Promise<ExecutionWithPlan> {
     const execution = await prisma.test_executions.findUnique({
       where: { execution_id: executionId },
       include: {
@@ -171,44 +183,56 @@ export class TestExecutionService {
           },
         },
       },
-    });
+    }) as ExecutionWithPlan | null;
 
     if (!execution) {
       throw new NotFoundError('Test execution not found');
     }
 
-    if (
-      execution.test_plans.student_id !== userId &&
-      execution.test_plans.planned_by !== userId
-    ) {
+    const studentIds = execution.test_plans.users_test_plans_student_idTousers.map(u => u.id);
+    const plannedByIds = execution.test_plans.users_test_plans_planned_byTousers.map(u => u.id);
+
+    if (!studentIds.includes(userId) && !plannedByIds.includes(userId)) {
       throw new UnauthorizedError('Unauthorized access to test execution');
     }
 
     return execution;
   }
 
-  private async calculateScore(execution: any): Promise<number> {
-    const testData = JSON.parse(execution.test_data);
-    let score = 0;
+  private async calculateScore(execution: ExecutionWithPlan): Promise<number> {
+    try {
+      const testData: TestData = JSON.parse(execution.test_data);
 
-    for (const response of testData.responses) {
-      const question = testData.questions.find(
-        (q: any) => q.question_id === response.questionId
-      );
-      if (question && question.correct_answer === response.answer) {
-        score++;
+      if (!testData.questions || !testData.responses) {
+        throw new ValidationError('Invalid test data structure');
       }
-    }
 
-    return Math.round((score / testData.questions.length) * 100);
+      const totalQuestions = testData.questions.length;
+      if (totalQuestions === 0) {
+        return 0;
+      }
+
+      const correctAnswers = testData.responses.filter(response => {
+        const question = testData.questions.find(
+          q => q.question_id === response.questionId
+        );
+        return question && question.correct_answer === response.answer;
+      }).length;
+
+      return Math.round((correctAnswers / totalQuestions) * 100);
+    } catch (error) {
+      console.error('Error calculating score:', error);
+      throw new ValidationError('Unable to calculate test score');
+    }
   }
 
-  private formatExecutionResponse(execution: any): TestExecutionResponse {
+  private formatExecutionResponse(execution: ExecutionWithPlan): TestExecutionResponse {
     return {
       executionId: execution.execution_id,
       status: execution.status,
       startedAt: execution.started_at,
       completedAt: execution.completed_at,
+      pausedAt: execution.paused_at,
       score: execution.score,
       testData: JSON.parse(execution.test_data),
     };
