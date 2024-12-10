@@ -11,7 +11,7 @@ export const getExecution = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = BigInt(req.user?.id || '0');
     
     const execution = await executionService.getExecution(BigInt(id), userId);
     res.json(execution);
@@ -27,7 +27,7 @@ export const startExecution = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = BigInt(req.user?.id || '0');
     
     const execution = await executionService.startExecution(BigInt(id), userId);
     res.json(execution);
@@ -43,7 +43,7 @@ export const submitAnswer = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = BigInt(req.user?.id || '0');
     const updateData: UpdateExecutionDTO = req.body;
     
     const execution = await executionService.submitAnswer(
@@ -64,7 +64,7 @@ export const completeExecution = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = BigInt(req.user?.id || '0');
     
     const execution = await executionService.completeExecution(BigInt(id), userId);
     res.json(execution);
@@ -80,7 +80,7 @@ export const createExecution = async (
 ) => {
   try {
     const { planId } = req.params;
-    const userId = req.user?.id;
+    const userId = BigInt(req.user?.id || '0');
     
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -100,7 +100,7 @@ export const resumeTest = async (
 ) => {
   try {
     const { executionId } = req.params;
-    const userId = req.user?.id;
+    const userId = BigInt(req.user?.id || '0');
     
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -120,7 +120,7 @@ export const pauseTest = async (
 ) => {
   try {
     const { executionId } = req.params;
-    const userId = req.user?.id;
+    const userId = BigInt(req.user?.id || '0');
     
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });

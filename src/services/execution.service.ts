@@ -5,8 +5,8 @@ import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/erro
 
 interface ExecutionWithPlan extends test_executions {
   test_plans: test_plans & {
-    users_test_plans_student_idTousers: { id: bigint }[];
-    users_test_plans_planned_byTousers: { id: bigint }[];
+    users_test_plans_student_idTousers: { user_id: bigint }[];
+    users_test_plans_planned_byTousers: { user_id: bigint }[];
   };
 }
 
@@ -97,22 +97,81 @@ export class TestExecutionService {
     planId: bigint,
     userId: bigint
   ): Promise<TestExecutionResponse> {
-    // Check if the user has access to the test plan
+    // Fetch the test plan with all related users
     const testPlan = await prisma.test_plans.findUnique({
-      where: { plan_id: planId },
+      where: { test_plan_id: planId },
       include: {
-        users_test_plans_student_idTousers: true,
-        users_test_plans_planned_byTousers: true,
+        users_test_plans_student_idTousers: {
+          select: {
+            user_id: true,
+            email: true,
+            first_name: true,
+            last_name: true
+          }
+        },
+        users_test_plans_planned_byTousers: {
+          select: {
+            user_id: true,
+            email: true,
+            first_name: true,
+            last_name: true
+          }
+        },
+        test_templates: true,
+        exam_boards: true,
       },
     });
+
+    // Comprehensive logging for debugging
+    console.log('Test Plan Raw Data:', JSON.stringify(testPlan, null, 2));
 
     if (!testPlan) {
       throw new NotFoundError('Test plan not found');
     }
 
-    // Verify user access to the test plan
-    const studentIds = testPlan.users_test_plans_student_idTousers.map(u => u.id);
-    if (!studentIds.includes(userId)) {
+    // Safe extraction of user IDs with extensive error handling
+    const extractUserIds = (users: any): bigint[] => {
+      // If users is an array, map user IDs
+      if (Array.isArray(users)) {
+        return users.map(u => BigInt(u.user_id));
+      }
+      
+      // If users is a single object, convert its user_id
+      if (users && typeof users === 'object' && 'user_id' in users) {
+        return [BigInt(users.user_id)];
+      }
+      
+      // If no valid users found, return empty array
+      console.error('Invalid users structure:', users);
+      return [];
+    };
+
+    // Extract student and planner user IDs
+    const studentUserIds = extractUserIds(testPlan.users_test_plans_student_idTousers);
+    const plannedByUserIds = extractUserIds(testPlan.users_test_plans_planned_byTousers);
+
+    // Detailed logging of extracted user IDs
+    console.log('User Authorization Check:', {
+      planId: planId.toString(),
+      userId: userId.toString(),
+      studentUserIds: studentUserIds.map(String),
+      plannedByUserIds: plannedByUserIds.map(String),
+      isStudent: studentUserIds.includes(userId),
+      isPlanner: plannedByUserIds.includes(userId),
+    });
+
+    // Check user authorization
+    const isAuthorized = studentUserIds.some(id => id === userId) || 
+                         plannedByUserIds.some(id => id === userId);
+  
+    if (!isAuthorized) {
+      console.error('Authorization Failed', {
+        userId: userId.toString(),
+        studentUsers: studentUserIds.map(String),
+        plannedByUsers: plannedByUserIds.map(String),
+        studentUserIdsType: typeof studentUserIds[0],
+        userIdType: typeof userId,
+      });
       throw new UnauthorizedError('You are not authorized to start this test');
     }
 
@@ -120,10 +179,11 @@ export class TestExecutionService {
     const newExecution = await prisma.test_executions.create({
       data: {
         test_plan_id: planId,
-        student_id: userId,
         status: 'NOT_STARTED',
         test_data: JSON.stringify({ responses: [] }),
-        created_at: new Date(),
+        started_at: null,
+        completed_at: null,
+        score: null,
       },
     });
 
@@ -189,8 +249,13 @@ export class TestExecutionService {
       throw new NotFoundError('Test execution not found');
     }
 
-    const studentIds = execution.test_plans.users_test_plans_student_idTousers.map(u => u.id);
-    const plannedByIds = execution.test_plans.users_test_plans_planned_byTousers.map(u => u.id);
+    const studentIds = Array.isArray(execution.test_plans.users_test_plans_student_idTousers) 
+      ? execution.test_plans.users_test_plans_student_idTousers.map(u => u.user_id)
+      : [];
+    
+    const plannedByIds = Array.isArray(execution.test_plans.users_test_plans_planned_byTousers)
+      ? execution.test_plans.users_test_plans_planned_byTousers.map(u => u.user_id)
+      : [];
 
     if (!studentIds.includes(userId) && !plannedByIds.includes(userId)) {
       throw new UnauthorizedError('Unauthorized access to test execution');
