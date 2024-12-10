@@ -40,12 +40,12 @@ const router = Router();
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Insufficient permissions
+ *         description: Insufficient permissions (requires TEACHER, PARENT, or STUDENT role)
  */
 router.post(
   '/',
   authenticate,
-  checkRole(['TEACHER', 'PARENT']),
+  checkRole(['TEACHER', 'PARENT', 'STUDENT']),
   validateTestPlanCreation,
   createTestPlan
 );
