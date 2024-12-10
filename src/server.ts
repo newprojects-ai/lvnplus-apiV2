@@ -46,7 +46,7 @@ app.use('/api/topics', topicRoutes);
 app.use('/api', subtopicRoutes);
 app.use('/api/tests/plans', testPlanRoutes);
 app.use('/api/tests', testRoutes);
-app.use('/api/executions', executionRoutes);
+app.use('/api/tests/executions', executionRoutes);
 app.use('/api/questions', questionRoutes);
 
 // Error handling

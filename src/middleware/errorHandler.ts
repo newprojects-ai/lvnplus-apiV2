@@ -2,6 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import { UnauthorizedError, ValidationError, NotFoundError } from '../utils/errors';
 
+// Add BigInt serialization support globally
+(BigInt.prototype as any).toJSON = function() {
+  return this.toString();
+};
+
 export const errorHandler = (
   error: Error,
   req: Request,
@@ -62,6 +67,14 @@ export const errorHandler = (
     return res.status(400).json({
       error: 'Validation Error',
       message: 'Invalid data provided to database operation',
+    });
+  }
+
+  // Specific handling for BigInt serialization errors
+  if (error instanceof TypeError && error.message.includes('serialize a BigInt')) {
+    return res.status(500).json({
+      error: 'Serialization Error',
+      message: 'Unable to serialize BigInt. Please check your data types.',
     });
   }
 

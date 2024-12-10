@@ -47,13 +47,13 @@ const templateSchema = z.object({
 });
 
 const testPlanSchema = z.object({
-  templateId: z.string().optional(),
+  templateId: z.string().optional().nullable(),
   boardId: z.number(),
   testType: z.enum(['TOPIC', 'MIXED', 'MENTAL_ARITHMETIC']),
   timingType: z.enum(['TIMED', 'UNTIMED']),
   timeLimit: z.number().optional(),
-  studentId: z.string(),
-  plannedBy: z.string(),
+  studentId: z.union([z.string(), z.number()]).transform(val => val.toString()),
+  plannedBy: z.union([z.string(), z.number()]).transform(val => val.toString()),
   configuration: z.object({
     topics: z.array(z.number()),
     subtopics: z.array(z.number()),
@@ -300,12 +300,14 @@ export const validateTestPlanCreation = (
   next: NextFunction
 ) => {
   try {
+    console.log('Received test plan creation payload:', JSON.stringify(req.body, null, 2));
     testPlanSchema.parse(req.body);
     next();
   } catch (error) {
+    console.error('Test Plan Validation Error:', error);
     res.status(400).json({
       error: 'Validation Error',
-      details: error.errors,
+      details: error.errors || error.message,
     });
   }
 };

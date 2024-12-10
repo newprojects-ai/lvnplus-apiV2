@@ -15,8 +15,12 @@ export class TestPlanService {
         test_type: data.testType,
         timing_type: data.timingType,
         time_limit: data.timeLimit,
-        student_id: BigInt(data.studentId),
-        planned_by: BigInt(data.plannedBy),
+        student_id: typeof data.studentId === 'bigint' 
+          ? data.studentId 
+          : BigInt(String(data.studentId)),
+        planned_by: typeof data.plannedBy === 'bigint' 
+          ? data.plannedBy 
+          : BigInt(String(data.plannedBy)),
         configuration: JSON.stringify(data.configuration),
       },
       include: {
@@ -121,7 +125,9 @@ export class TestPlanService {
         ...(data.testType && { test_type: data.testType }),
         ...(data.timingType && { timing_type: data.timingType }),
         ...(data.timeLimit !== undefined && { time_limit: data.timeLimit }),
-        ...(data.studentId && { student_id: BigInt(data.studentId) }),
+        ...(data.studentId && { student_id: typeof data.studentId === 'bigint' 
+          ? data.studentId 
+          : BigInt(String(data.studentId)) }),
         ...(data.configuration && { configuration: JSON.stringify(data.configuration) }),
       },
       include: this.getTestPlanIncludes(),
