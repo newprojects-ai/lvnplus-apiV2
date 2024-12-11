@@ -13,7 +13,7 @@ export interface LoginUserDTO {
 
 export interface AuthResponse {
   user: {
-    id: string;
+    id: string | bigint;
     email: string;
     firstName: string | null;
     lastName: string | null;
@@ -42,11 +42,11 @@ export interface CreateTemplateDTO {
 export interface UpdateTemplateDTO extends CreateTemplateDTO {}
 
 export interface TemplateResponse {
-  id: string;
+  id: string | bigint;
   templateName: string;
   source: 'SYSTEM' | 'USER';
   creator: {
-    id: string;
+    id: string | bigint;
     email: string;
     firstName: string | null;
     lastName: string | null;
@@ -69,36 +69,37 @@ export interface TemplateFilters {
 }
 
 export interface CreateTestPlanDTO {
-  templateId?: bigint;
+  templateId?: string | bigint;
   boardId: number;
   testType: 'TOPIC' | 'MIXED' | 'MENTAL_ARITHMETIC';
   timingType: 'TIMED' | 'UNTIMED';
   timeLimit?: number;
-  studentId: bigint;
-  plannedBy: bigint;
+  studentId: string | bigint;
+  plannedBy: string | bigint;
   configuration: {
     topics: number[];
     subtopics: number[];
     questionCounts: Record<string, number>;
+    difficulty?: number | string;
   };
 }
 
 export interface UpdateTestPlanDTO extends Partial<CreateTestPlanDTO> {}
 
 export interface TestPlanResponse {
-  testPlanId: bigint;
-  templateId?: bigint;
+  testPlanId: string | bigint;
+  templateId?: string | bigint;
   boardId: number;
   testType: string;
   timingType: string;
   timeLimit?: number;
   student: {
-    userId: bigint;
+    userId: string | bigint;
     email: string;
     firstName?: string;
     lastName?: string;
   };
-  plannedBy: bigint;
+  plannedBy: string | bigint;
   plannedAt: Date;
   configuration: any;
   execution?: {
@@ -110,8 +111,8 @@ export interface TestPlanResponse {
 }
 
 export interface TestExecutionResponse {
-  executionId: bigint;
-  testPlanId: bigint;
+  executionId: string | bigint;
+  testPlanId: string | bigint;
   status: string;
   startedAt?: Date;
   testData: {
@@ -242,7 +243,7 @@ export interface CreateQuestionDTO {
 export interface UpdateQuestionDTO extends Partial<CreateQuestionDTO> {}
 
 export interface QuestionResponse {
-  id: string;
+  id: string | bigint;
   questionText: string;
   options: any;
   correctAnswer: string;
@@ -260,7 +261,7 @@ export interface QuestionResponse {
     };
   };
   creator: {
-    id: string;
+    id: string | bigint;
     email: string;
     firstName: string | null;
     lastName: string | null;
@@ -289,4 +290,19 @@ export interface RegisterUserDTO {
   password: string;
   firstName: string;
   lastName: string;
+}
+
+export interface FilterQuestionParams {
+  topicId?: number | string;
+  subtopicId?: number | string;
+  difficulty?: number | string;
+  limit: number;
+  offset?: number;
+}
+
+export interface FilterQuestionResponse {
+  data: (QuestionResponse & { topicId?: number; topicName?: string })[];
+  total: number;
+  limit: number;
+  offset: number;
 }

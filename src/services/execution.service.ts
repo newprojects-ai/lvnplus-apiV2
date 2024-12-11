@@ -1,10 +1,18 @@
-import { Prisma, test_executions, test_plans } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
-import { TestExecutionResponse, UpdateExecutionDTO } from '../types';
-import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors';
+import { 
+  CreateTestExecutionDTO, 
+  UpdateTestExecutionDTO, 
+  TestExecutionResponse 
+} from '../types';
+import { 
+  NotFoundError, 
+  UnauthorizedError, 
+  ValidationError 
+} from '../utils/errors';
 
-interface ExecutionWithPlan extends test_executions {
-  test_plans: test_plans & {
+interface ExecutionWithPlan extends Prisma.test_executions {
+  test_plans: Prisma.test_plans & {
     users_test_plans_student_idTousers: { user_id: bigint }[];
     users_test_plans_planned_byTousers: { user_id: bigint }[];
   };
@@ -16,26 +24,63 @@ interface TestData {
 }
 
 export class TestExecutionService {
+  // Utility function to safely convert to BigInt
+  private safeBigInt(value: bigint | string | undefined, defaultValue: bigint = BigInt(0)): bigint {
+    if (value === undefined) {
+      return defaultValue;
+    }
+    
+    try {
+      // Handle empty strings
+      if (typeof value === 'string' && value.trim() === '') {
+        throw new Error('Empty string is not a valid BigInt');
+      }
+      
+      // Convert to BigInt
+      const result = typeof value === 'string' ? BigInt(value) : value;
+      
+      // Validate the result
+      if (result === BigInt(0) && value !== '0' && value !== 0n) {
+        throw new Error(`Invalid BigInt value: ${value}`);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Failed to convert to BigInt:', {
+        value,
+        type: typeof value,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw new ValidationError(`Invalid execution ID: ${value}`);
+    }
+  }
+
   async getExecution(
-    executionId: bigint,
-    userId: bigint
+    executionId: bigint | string | undefined,
+    userId: bigint | string | undefined
   ): Promise<TestExecutionResponse> {
-    const execution = await this.findExecutionWithAccess(executionId, userId);
+    const safeExecutionId = this.safeBigInt(executionId);
+    const safeUserId = this.safeBigInt(userId);
+
+    const execution = await this.findExecutionWithAccess(safeExecutionId, safeUserId);
     return this.formatExecutionResponse(execution);
   }
 
   async startExecution(
-    executionId: bigint,
-    userId: bigint
+    executionId: bigint | string | undefined,
+    userId: bigint | string | undefined
   ): Promise<TestExecutionResponse> {
-    const execution = await this.findExecutionWithAccess(executionId, userId);
+    const safeExecutionId = this.safeBigInt(executionId);
+    const safeUserId = this.safeBigInt(userId);
+
+    const execution = await this.findExecutionWithAccess(safeExecutionId, safeUserId);
 
     if (execution.status !== 'NOT_STARTED') {
       throw new ValidationError('Test has already been started');
     }
 
     const updatedExecution = await prisma.test_executions.update({
-      where: { execution_id: executionId },
+      where: { execution_id: safeExecutionId },
       data: {
         status: 'IN_PROGRESS',
         started_at: new Date(),
@@ -46,34 +91,70 @@ export class TestExecutionService {
   }
 
   async submitAnswer(
-    executionId: bigint,
-    userId: bigint,
-    updateData: UpdateExecutionDTO
+    executionId: bigint | string | undefined,
+    userId: bigint | string | undefined,
+    updateData: UpdateTestExecutionDTO
   ): Promise<TestExecutionResponse> {
-    const execution = await this.findExecutionWithAccess(executionId, userId);
+    const safeExecutionId = this.safeBigInt(executionId);
+    const safeUserId = this.safeBigInt(userId);
+    const safeQuestionId = this.safeBigInt(updateData.question_id);
 
-    if (execution.status !== 'IN_PROGRESS') {
-      throw new ValidationError('Test is not in progress');
+    const execution = await this.findExecutionWithAccess(safeExecutionId, safeUserId);
+
+    // Parse the existing test data
+    const testData = JSON.parse(execution.test_data);
+    const { questions, responses } = testData;
+
+    // Find the question being answered
+    const questionIndex = responses.findIndex(
+      (resp: { question_id: bigint }) => resp.question_id === safeQuestionId
+    );
+
+    if (questionIndex === -1) {
+      throw new NotFoundError('Question not found in the test execution');
     }
 
-    const testData: TestData = JSON.parse(execution.test_data);
-    testData.responses.push(updateData.response);
+    // Update the response for the specific question
+    const updatedResponses = [...responses];
+    updatedResponses[questionIndex] = {
+      ...updatedResponses[questionIndex],
+      student_answer: updateData.student_answer,
+      is_correct: this.checkAnswer(
+        questions[questionIndex].options, 
+        updateData.student_answer
+      ),
+      time_spent: updateData.time_spent || 0
+    };
 
+    // Update the test data with the new responses
+    const updatedTestData = {
+      ...testData,
+      responses: updatedResponses
+    };
+
+    // Update the test execution in the database
     const updatedExecution = await prisma.test_executions.update({
-      where: { execution_id: executionId },
+      where: { execution_id: safeExecutionId },
       data: {
-        test_data: JSON.stringify(testData),
-      },
+        test_data: JSON.stringify(updatedTestData),
+        status: this.determineExecutionStatus(updatedResponses)
+      }
     });
 
-    return this.formatExecutionResponse(updatedExecution);
+    return {
+      execution: updatedExecution,
+      testData: updatedTestData
+    };
   }
 
   async completeExecution(
-    executionId: bigint,
-    userId: bigint
+    executionId: bigint | string | undefined,
+    userId: bigint | string | undefined
   ): Promise<TestExecutionResponse> {
-    const execution = await this.findExecutionWithAccess(executionId, userId);
+    const safeExecutionId = this.safeBigInt(executionId);
+    const safeUserId = this.safeBigInt(userId);
+
+    const execution = await this.findExecutionWithAccess(safeExecutionId, safeUserId);
 
     if (execution.status !== 'IN_PROGRESS') {
       throw new ValidationError('Test is not in progress');
@@ -82,7 +163,7 @@ export class TestExecutionService {
     const score = await this.calculateScore(execution);
 
     const updatedExecution = await prisma.test_executions.update({
-      where: { execution_id: executionId },
+      where: { execution_id: safeExecutionId },
       data: {
         status: 'COMPLETED',
         completed_at: new Date(),
@@ -94,12 +175,15 @@ export class TestExecutionService {
   }
 
   async createExecution(
-    planId: bigint,
-    userId: bigint
+    planId: bigint | string | undefined,
+    userId: bigint | string | undefined
   ): Promise<TestExecutionResponse> {
+    const safeUserId = this.safeBigInt(userId);
+    const safePlanId = this.safeBigInt(planId);
+
     // Fetch the test plan with all related users
     const testPlan = await prisma.test_plans.findUnique({
-      where: { test_plan_id: planId },
+      where: { test_plan_id: safePlanId },
       include: {
         users_test_plans_student_idTousers: {
           select: {
@@ -119,11 +203,12 @@ export class TestExecutionService {
         },
         test_templates: true,
         exam_boards: true,
+        test_executions: {
+          orderBy: { execution_id: 'desc' },
+          take: 1
+        }
       },
     });
-
-    // Comprehensive logging for debugging
-    console.log('Test Plan Raw Data:', JSON.stringify(testPlan, null, 2));
 
     if (!testPlan) {
       throw new NotFoundError('Test plan not found');
@@ -150,58 +235,88 @@ export class TestExecutionService {
     const studentUserIds = extractUserIds(testPlan.users_test_plans_student_idTousers);
     const plannedByUserIds = extractUserIds(testPlan.users_test_plans_planned_byTousers);
 
-    // Detailed logging of extracted user IDs
-    console.log('User Authorization Check:', {
-      planId: planId.toString(),
-      userId: userId.toString(),
-      studentUserIds: studentUserIds.map(String),
-      plannedByUserIds: plannedByUserIds.map(String),
-      isStudent: studentUserIds.includes(userId),
-      isPlanner: plannedByUserIds.includes(userId),
-    });
-
     // Check user authorization
-    const isAuthorized = studentUserIds.some(id => id === userId) || 
-                         plannedByUserIds.some(id => id === userId);
-  
+    const isAuthorized = studentUserIds.some(id => id === safeUserId) || 
+                         plannedByUserIds.some(id => id === safeUserId);
+
     if (!isAuthorized) {
-      console.error('Authorization Failed', {
-        userId: userId.toString(),
-        studentUsers: studentUserIds.map(String),
-        plannedByUsers: plannedByUserIds.map(String),
-        studentUserIdsType: typeof studentUserIds[0],
-        userIdType: typeof userId,
-      });
       throw new UnauthorizedError('You are not authorized to start this test');
     }
+
+    // If an execution already exists and is NOT_STARTED, return it
+    if (testPlan.test_executions && testPlan.test_executions.length > 0) {
+      const existingExecution = testPlan.test_executions[0];
+      if (existingExecution.status === 'NOT_STARTED') {
+        console.log('Existing NOT_STARTED execution found', {
+          executionId: existingExecution.execution_id.toString(),
+        });
+        return this.formatExecutionResponse(existingExecution);
+      }
+    }
+
+    // Fetch selected questions for the test plan
+    const selectedQuestions = await prisma.questions.findMany({
+      where: {
+        question_id: {
+          in: JSON.parse(testPlan.configuration).questions.map(q => BigInt(q.question_id))
+        }
+      }
+    });
 
     // Create a new test execution
     const newExecution = await prisma.test_executions.create({
       data: {
-        test_plan_id: planId,
+        test_plan_id: safePlanId,
         status: 'NOT_STARTED',
-        test_data: JSON.stringify({ responses: [] }),
+        test_data: JSON.stringify({
+          questions: selectedQuestions.map(q => ({
+            question_id: q.question_id,
+            subtopic_id: q.subtopic_id,
+            question_text: q.question_text,
+            options: q.options,
+            difficulty_level: q.difficulty_level,
+          })),
+          responses: selectedQuestions.map(q => ({
+            question_id: q.question_id,
+            student_answer: null,
+            is_correct: null,
+            time_spent: null,
+          })),
+          timing: {
+            test_start_time: null,
+            test_end_time: null,
+            total_time_allowed: testPlan.time_limit,
+          },
+        }),
         started_at: null,
         completed_at: null,
         score: null,
       },
     });
 
+    console.log('Test execution created', {
+      executionId: newExecution.execution_id.toString(),
+      testPlanId: newExecution.test_plan_id.toString(),
+    });
+
     return this.formatExecutionResponse(newExecution);
   }
 
   async resumeExecution(
-    executionId: bigint,
-    userId: bigint
+    executionId: bigint | string | undefined,
+    userId: bigint | string | undefined
   ): Promise<TestExecutionResponse> {
-    const execution = await this.findExecutionWithAccess(executionId, userId);
+    const safeExecutionId = this.safeBigInt(executionId);
+    const safeUserId = this.safeBigInt(userId);
+
+    const execution = await this.findExecutionWithAccess(safeExecutionId, safeUserId);
 
     if (execution.status !== 'PAUSED') {
       throw new ValidationError('Test is not paused');
     }
 
     const updatedExecution = await prisma.test_executions.update({
-      where: { execution_id: executionId },
+      where: { execution_id: safeExecutionId },
       data: {
         status: 'IN_PROGRESS',
         paused_at: null,
@@ -212,17 +327,20 @@ export class TestExecutionService {
   }
 
   async pauseExecution(
-    executionId: bigint,
-    userId: bigint
+    executionId: bigint | string | undefined,
+    userId: bigint | string | undefined
   ): Promise<TestExecutionResponse> {
-    const execution = await this.findExecutionWithAccess(executionId, userId);
+    const safeExecutionId = this.safeBigInt(executionId);
+    const safeUserId = this.safeBigInt(userId);
+
+    const execution = await this.findExecutionWithAccess(safeExecutionId, safeUserId);
 
     if (execution.status !== 'IN_PROGRESS') {
       throw new ValidationError('Test is not in progress');
     }
 
     const updatedExecution = await prisma.test_executions.update({
-      where: { execution_id: executionId },
+      where: { execution_id: safeExecutionId },
       data: {
         status: 'PAUSED',
         paused_at: new Date(),
@@ -232,33 +350,64 @@ export class TestExecutionService {
     return this.formatExecutionResponse(updatedExecution);
   }
 
-  private async findExecutionWithAccess(executionId: bigint, userId: bigint): Promise<ExecutionWithPlan> {
+  private async findExecutionWithAccess(
+    executionId: bigint | string | undefined,
+    userId: bigint | string | undefined
+  ): Promise<ExecutionWithPlan> {
+    // Safely convert inputs to bigint with default values
+    const safeExecutionId = this.safeBigInt(executionId);
+    const safeUserId = this.safeBigInt(userId);
+
+    console.log('Finding execution with:', {
+      executionId: safeExecutionId,
+      userId: safeUserId
+    });
+
     const execution = await prisma.test_executions.findUnique({
-      where: { execution_id: executionId },
+      where: { 
+        execution_id: safeExecutionId 
+      },
       include: {
         test_plans: {
           include: {
             users_test_plans_student_idTousers: true,
-            users_test_plans_planned_byTousers: true,
-          },
-        },
-      },
-    }) as ExecutionWithPlan | null;
+            users_test_plans_planned_byTousers: true
+          }
+        }
+      }
+    });
 
+    // Enhanced logging for debugging
     if (!execution) {
-      throw new NotFoundError('Test execution not found');
+      console.error('No execution found with ID:', safeExecutionId);
+      
+      // Check if the execution exists without the include
+      const baseExecution = await prisma.test_executions.findUnique({
+        where: { execution_id: safeExecutionId }
+      });
+
+      if (baseExecution) {
+        console.log('Base execution exists:', baseExecution);
+      }
+
+      throw new NotFoundError(`Test execution not found for ID: ${safeExecutionId}`);
     }
 
-    const studentIds = Array.isArray(execution.test_plans.users_test_plans_student_idTousers) 
-      ? execution.test_plans.users_test_plans_student_idTousers.map(u => u.user_id)
-      : [];
-    
-    const plannedByIds = Array.isArray(execution.test_plans.users_test_plans_planned_byTousers)
-      ? execution.test_plans.users_test_plans_planned_byTousers.map(u => u.user_id)
-      : [];
+    // Check if the user is associated with the test plan
+    const isAssociatedStudent = execution.test_plans.users_test_plans_student_idTousers
+      .some(student => student.user_id === safeUserId);
+  
+    const isAssociatedPlanner = execution.test_plans.users_test_plans_planned_byTousers
+      .some(planner => planner.user_id === safeUserId);
 
-    if (!studentIds.includes(userId) && !plannedByIds.includes(userId)) {
-      throw new UnauthorizedError('Unauthorized access to test execution');
+    if (!isAssociatedStudent && !isAssociatedPlanner) {
+      console.error('Unauthorized access attempt:', {
+        executionId: safeExecutionId,
+        userId: safeUserId,
+        studentIds: execution.test_plans.users_test_plans_student_idTousers.map(s => s.user_id),
+        plannerIds: execution.test_plans.users_test_plans_planned_byTousers.map(p => p.user_id)
+      });
+      throw new UnauthorizedError('You are not authorized to access this test execution');
     }
 
     return execution;
@@ -289,6 +438,20 @@ export class TestExecutionService {
       console.error('Error calculating score:', error);
       throw new ValidationError('Unable to calculate test score');
     }
+  }
+
+  private checkAnswer(options: any[], studentAnswer: string): boolean {
+    // Find the correct option
+    const correctOption = options.find((opt: any) => opt.is_correct);
+    return studentAnswer === correctOption?.option_text;
+  }
+
+  private determineExecutionStatus(responses: any[]): string {
+    // Check if all questions have been answered
+    const allAnswered = responses.every(resp => resp.student_answer !== null);
+    
+    // If all answered, mark as completed
+    return allAnswered ? 'COMPLETED' : 'IN_PROGRESS';
   }
 
   private formatExecutionResponse(execution: ExecutionWithPlan): TestExecutionResponse {

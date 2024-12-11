@@ -1,28 +1,138 @@
-import { Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { CreateTestPlanDTO, UpdateTestPlanDTO, TestPlanResponse } from '../types';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors';
+import { QuestionService } from './question.service';
+import { distributeQuestions, validateQuestionDistribution } from '../utils/questionDistribution';
 
 export class TestPlanService {
   async createTestPlan(
     plannerId: bigint,
     data: CreateTestPlanDTO
   ): Promise<TestPlanResponse> {
+    // Ensure all IDs are converted to BigInt
+    const safePlannerId = BigInt(plannerId);
+    const safeStudentId = data.studentId ? BigInt(data.studentId) : null;
+    const safeBoardId = data.boardId ? BigInt(data.boardId) : null;
+
+    // Validate and convert subtopic IDs
+    const subtopicIds = data.configuration.subtopics.map(id => BigInt(id));
+    const topicIds = data.configuration.topics.map(id => BigInt(id));
+    
+    // Determine difficulty level and total questions
+    const difficultyMap: { [key: string]: number } = {
+      'EASY': 1,
+      'MEDIUM': 2,
+      'HARD': 3,
+      '1': 1,
+      '2': 2,
+      '3': 3,
+      '4': 4,
+      '5': 5
+    };
+
+    // Prepare question counts
+    const questionCounts: { [key: string]: number } = {};
+    
+    // Check if the keys in questionCounts match any of the topic IDs first
+    if (Object.keys(data.configuration.questionCounts).some(key => 
+      key.startsWith('topic_') || topicIds.some(id => id.toString() === key)
+    )) {
+      // Handle topic-based question counts
+      topicIds.forEach(topicId => {
+        const topicKey = `topic_${topicId}`;
+        const count = data.configuration.questionCounts[topicKey] || 
+                     data.configuration.questionCounts[topicId.toString()] || 0;
+        questionCounts[topicId.toString()] = count;
+      });
+    }
+    // Then check for explicit difficulty levels
+    else if (Object.keys(data.configuration.questionCounts).some(key => 
+      ['EASY', 'MEDIUM', 'HARD'].includes(key)
+    )) {
+      // Handle difficulty-based question counts
+      Object.keys(data.configuration.questionCounts).forEach(key => {
+        const mappedKey = difficultyMap[key] || key;
+        questionCounts[mappedKey] = data.configuration.questionCounts[key];
+      });
+    }
+    // Default case: distribute questions equally across difficulty levels 1 to 3
+    else {
+      const totalQuestions = Object.values(data.configuration.questionCounts).reduce((a, b) => a + b, 0);
+      const difficultyLevels = [1, 2, 3]; // Default difficulties
+      const questionsPerDifficulty = Math.floor(totalQuestions / difficultyLevels.length);
+      const remainingQuestions = totalQuestions % difficultyLevels.length;
+
+      difficultyLevels.forEach((difficulty, index) => {
+        questionCounts[difficulty] = questionsPerDifficulty + (index < remainingQuestions ? 1 : 0);
+      });
+    }
+
+    // Calculate total questions
+    const totalQuestions = Object.values(questionCounts).reduce((a, b) => a + b, 0);
+
+    // Select questions using the new question distribution utility
+    const selectedQuestions = await this.selectQuestions(data);
+
+    if (selectedQuestions.length < totalQuestions) {
+      throw new ValidationError(`Not enough questions available. Found ${selectedQuestions.length}, needed ${totalQuestions}`);
+    }
+
+    // Randomly select questions based on the configuration
+    const randomQuestions = this.selectRandomQuestions(selectedQuestions, totalQuestions);
+
+    // Create test plan in the database
     const testPlan = await prisma.test_plans.create({
       data: {
-        template_id: data.templateId,
-        board_id: data.boardId,
+        board_id: safeBoardId ? Number(safeBoardId) : null,
+        student_id: safeStudentId ? Number(safeStudentId) : null,
+        planned_by: Number(safePlannerId),
         test_type: data.testType,
         timing_type: data.timingType,
         time_limit: data.timeLimit,
-        student_id: typeof data.studentId === 'bigint' 
-          ? data.studentId 
-          : BigInt(String(data.studentId)),
-        planned_by: typeof data.plannedBy === 'bigint' 
-          ? data.plannedBy 
-          : BigInt(String(data.plannedBy)),
-        configuration: JSON.stringify(data.configuration),
+        planned_at: new Date(), // Use planned_at instead of test_start_time
+        configuration: JSON.stringify({
+          topics: [topicIds.map(id => id.toString())],
+          subtopics: subtopicIds.map(id => id.toString()),
+          questionCounts: questionCounts
+        }),
+        template_id: data.templateId || undefined,
       },
+    });
+
+    // Create test execution for the test plan
+    const testExecution = await prisma.test_executions.create({
+      data: {
+        test_plan_id: testPlan.test_plan_id,
+        status: 'NOT_STARTED',
+        test_data: JSON.stringify({
+          questions: randomQuestions.map(q => ({
+            question_id: Number(q.question_id),
+            subtopic_id: Number(q.subtopic_id),
+            question_text: q.question_text,
+            options: JSON.parse(q.options),
+            difficulty_level: Number(q.difficulty_level),
+          })),
+          responses: randomQuestions.map(q => ({
+            question_id: Number(q.question_id),
+            student_answer: null,
+            is_correct: null,
+            time_spent: 0
+          })),
+        }),
+      },
+    });
+
+    console.log('Test plan and execution created', {
+      testPlanId: testPlan.test_plan_id,
+      testExecutionId: testExecution.execution_id,
+      selectedQuestionsCount: randomQuestions.length,
+      questionCounts,
+    });
+
+    // Fetch the complete test plan with the newly created execution
+    const completeTestPlan = await prisma.test_plans.findUnique({
+      where: { test_plan_id: testPlan.test_plan_id },
       include: {
         users_test_plans_student_idTousers: {
           select: {
@@ -47,26 +157,41 @@ export class TestPlanService {
       },
     });
 
-    const selectedQuestions = await this.selectQuestions(data.configuration);
+    return this.formatTestPlanResponse(completeTestPlan);
+  }
+
+  private async selectQuestions(testPlan: CreateTestPlanDTO): Promise<any[]> {
+    const questionService = new QuestionService();
     
-    if (selectedQuestions.length < this.getTotalQuestionCount(data.configuration.questionCounts)) {
-      throw new ValidationError('Not enough questions available for the selected criteria');
+    // Calculate total questions
+    const totalQuestions = Object.values(testPlan.configuration.questionCounts).reduce((a, b) => a + b, 0);
+    
+    // Distribute questions across difficulty levels
+    const questionDistribution = distributeQuestions(totalQuestions);
+    
+    // Validate the distribution
+    if (!validateQuestionDistribution(questionDistribution)) {
+      throw new ValidationError('Invalid question distribution');
     }
 
-    // Create initial test execution
-    await prisma.test_executions.create({
-      data: {
-        test_plan_id: testPlan.test_plan_id,
-        status: 'NOT_STARTED',
-        test_data: JSON.stringify({
-          questions: selectedQuestions,
-          responses: [],
-          timing: [],
-        }),
-      },
-    });
+    const questionResults: any[] = [];
 
-    return this.formatTestPlanResponse(testPlan);
+    // Fetch questions for each difficulty level
+    for (const [difficulty, count] of Object.entries(questionDistribution)) {
+      const filterParams = {
+        difficulty: Number(difficulty),
+        limit: count,
+        offset: 0,
+        ...(testPlan.configuration.subtopics.length > 0 && { 
+          subtopicId: Number(testPlan.configuration.subtopics[0]) 
+        })
+      };
+
+      const questionResult = await questionService.filterQuestions(filterParams);
+      questionResults.push(...questionResult.data);
+    }
+
+    return questionResults;
   }
 
   async getTestPlan(
@@ -185,100 +310,12 @@ export class TestPlanService {
     };
   }
 
-  private async selectQuestions(configuration: CreateTestPlanDTO['configuration']) {
-    const { questionCounts, subtopics } = configuration;
-    const totalQuestions = this.getTotalQuestionCount(questionCounts);
-    
-    // Get all available questions grouped by difficulty
-    const availableQuestions = await prisma.questions.findMany({
-      where: {
-        subtopic_id: { in: subtopics },
-        active: true,
-      },
-      select: {
-        question_id: true,
-        question_text: true,
-        options: true,
-        difficulty_level: true,
-        subtopic_id: true,
-        subtopics: {
-          select: {
-            topics: {
-              select: {
-                topic_id: true,
-                topic_name: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // Group questions by difficulty level
-    const questionsByDifficulty = {
-      1: availableQuestions.filter(q => q.difficulty_level === 1), // Easy
-      2: availableQuestions.filter(q => q.difficulty_level === 2), // Medium
-      3: availableQuestions.filter(q => q.difficulty_level === 3), // Hard
-    };
-
-    // Select questions based on required counts
-    const selectedQuestions = [
-      ...this.selectRandomQuestions(questionsByDifficulty[1], questionCounts.easy),
-      ...this.selectRandomQuestions(questionsByDifficulty[2], questionCounts.medium),
-      ...this.selectRandomQuestions(questionsByDifficulty[3], questionCounts.hard),
-    ];
-
-    // Ensure topic distribution
-    const selectedQuestionsWithTopicBalance = this.balanceTopicDistribution(
-      selectedQuestions,
-      configuration.topics
-    );
-
-    // Randomize final question order
-    return this.shuffleArray(selectedQuestionsWithTopicBalance);
-  }
-
   private selectRandomQuestions(questions: any[], count: number): any[] {
-    const shuffled = this.shuffleArray([...questions]);
-    return shuffled.slice(0, count);
-  }
-
-  private balanceTopicDistribution(questions: any[], topics: number[]): any[] {
-    const questionsPerTopic = Math.ceil(questions.length / topics.length);
+    // Shuffle the questions array
+    const shuffled = [...questions].sort(() => 0.5 - Math.random());
     
-    // Group questions by topic
-    const questionsByTopic = questions.reduce((acc, q) => {
-      const topicId = q.subtopics.topics.topic_id;
-      if (!acc[topicId]) {
-        acc[topicId] = [];
-      }
-      acc[topicId].push(q);
-      return acc;
-    }, {});
-
-    // Ensure balanced distribution
-    const balancedQuestions: any[] = [];
-    topics.forEach(topicId => {
-      const topicQuestions = questionsByTopic[topicId] || [];
-      balancedQuestions.push(
-        ...this.selectRandomQuestions(topicQuestions, questionsPerTopic)
-      );
-    });
-
-    return balancedQuestions.slice(0, questions.length);
-  }
-
-  private shuffleArray<T>(array: T[]): T[] {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }
-
-  private getTotalQuestionCount(questionCounts: CreateTestPlanDTO['configuration']['questionCounts']): number {
-    return questionCounts.easy + questionCounts.medium + questionCounts.hard;
+    // Return the first 'count' questions
+    return shuffled.slice(0, count);
   }
 
   private formatTestPlanResponse(

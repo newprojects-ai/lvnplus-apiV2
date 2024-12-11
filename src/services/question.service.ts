@@ -6,8 +6,10 @@ import {
   QuestionResponse,
   QuestionFilters,
   RandomQuestionParams,
+  FilterQuestionParams,
+  FilterQuestionResponse,
 } from '../types';
-import { NotFoundError, UnauthorizedError } from '../utils/errors';
+import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors';
 
 export class QuestionService {
   async getQuestions(page: number, limit: number) {
@@ -121,52 +123,111 @@ export class QuestionService {
     });
   }
 
-  async filterQuestions(filters: QuestionFilters) {
-    try {
-      const where: Prisma.questionsWhereInput = {
-        active: true,
-        ...(filters.subtopicId && { subtopic_id: filters.subtopicId }),
-        ...(filters.difficulty !== undefined && { difficulty_level: filters.difficulty })
-      };
+  async filterQuestions(params: FilterQuestionParams): Promise<FilterQuestionResponse> {
+    // Validate and convert difficulty to integer
+    const difficultyMap: { [key: string]: number } = {
+      'EASY': 1,
+      'MEDIUM': 2,
+      'HARD': 3,
+      '1': 1,
+      '2': 2,
+      '3': 3,
+      '4': 4
+    };
 
-      if (filters.topicId) {
-        where.subtopics = {
-          topics: {
-            topic_id: filters.topicId,
-            ...(filters.examBoard && {
-              subjects: {
-                exam_boards: {
-                  some: {
-                    board_id: filters.examBoard
-                  }
-                }
-              }
-            })
+    // Convert difficulty to integer if it's a string
+    const difficulty = typeof params.difficulty === 'string' 
+      ? difficultyMap[params.difficulty] || 2 
+      : params.difficulty || 2;
+
+    // Prepare base query
+    const query: Prisma.QuestionsWhereInput = {
+      ...(params.subtopicId && { subtopic_id: Number(params.subtopicId) }),
+      difficulty_level: difficulty,
+    };
+
+    // If topicId is provided, add a nested query through subtopics
+    const topicQuery = params.topicId 
+      ? { 
+          subtopics: {
+            topic_id: Number(params.topicId)
           }
-        };
+        }
+      : {};
+
+    try {
+      // Fetch total count of matching questions
+      const totalCount = await prisma.questions.count({ 
+        where: {
+          ...query,
+          ...topicQuery
+        } 
+      });
+
+      // If not enough questions are available, adjust difficulty dynamically
+      if (totalCount < params.limit) {
+        console.warn(`Not enough questions at difficulty level ${difficulty}. Attempting to find more...`);
+        
+        // Try adjacent difficulty levels if not enough questions
+        const adjacentDifficulties = difficulty === 2 
+          ? [1, 3]  // For medium, check easy and hard
+          : difficulty < 2 
+            ? [2, 3]  // For easy, check medium and hard 
+            : [1, 2];  // For hard, check medium and easy
+
+        for (const adjDifficulty of adjacentDifficulties) {
+          const adjustedQuery = {
+            ...query,
+            difficulty_level: adjDifficulty,
+            ...topicQuery
+          };
+
+          const adjustedCount = await prisma.questions.count({ where: adjustedQuery });
+          
+          if (adjustedCount >= params.limit) {
+            query.difficulty_level = adjDifficulty;
+            break;
+          }
+        }
       }
 
-      const [questions, total] = await Promise.all([
-        prisma.questions.findMany({
-          where,
-          include: this.getQuestionIncludes(),
-          skip: filters.offset,
-          take: filters.limit,
-          orderBy: { created_at: 'desc' },
-        }),
-        prisma.questions.count({ where }),
-      ]);
+      // Fetch questions with pagination and randomization
+      const questions = await prisma.questions.findMany({
+        where: {
+          ...query,
+          ...topicQuery
+        },
+        include: {
+          subtopics: {
+            include: {
+              topics: true
+            }
+          }
+        },
+        take: params.limit,
+        skip: params.offset || 0,
+        orderBy: {
+          question_id: 'desc'  // Newest questions first
+        }
+      });
+
+      // If still not enough questions, throw an error
+      if (questions.length < params.limit) {
+        throw new ValidationError(`Not enough questions available. Found ${questions.length}, needed ${params.limit}`);
+      }
 
       return {
-        data: questions.map(this.formatQuestionResponse),
-        pagination: {
-          total,
-          offset: filters.offset,
-          limit: filters.limit,
-        },
+        data: questions.map(q => ({
+          ...q,
+          topicId: q.subtopics.topic_id,
+          topicName: q.subtopics.topics.topic_name
+        })),
+        total: totalCount,
+        limit: params.limit,
+        offset: params.offset || 0
       };
     } catch (error) {
-      console.error('Error in filterQuestions:', error);
+      console.error('Error filtering questions:', error);
       throw error;
     }
   }
@@ -198,7 +259,7 @@ export class QuestionService {
     try {
       const where: Prisma.questionsWhereInput = {
         active: true,
-        ...(params.difficulty !== undefined && { difficulty_level: params.difficulty })
+        ...(params.difficulty && { difficulty_level: String(params.difficulty) })
       };
 
       if (params.topicIds?.length) {

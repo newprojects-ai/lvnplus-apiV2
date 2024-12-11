@@ -11,9 +11,17 @@ export const getExecution = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = BigInt(req.user?.id || '0');
-    
-    const execution = await executionService.getExecution(BigInt(id), userId);
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized - User ID is required' });
+    }
+
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ message: 'Invalid execution ID provided' });
+    }
+
+    const execution = await executionService.getExecution(id, userId);
     res.json(execution);
   } catch (error) {
     next(error);
@@ -27,9 +35,13 @@ export const startExecution = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = BigInt(req.user?.id || '0');
-    
-    const execution = await executionService.startExecution(BigInt(id), userId);
+    const userId = req.user?.id || '0';
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const execution = await executionService.startExecution(id, userId);
     res.json(execution);
   } catch (error) {
     next(error);
@@ -43,14 +55,14 @@ export const submitAnswer = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = BigInt(req.user?.id || '0');
+    const userId = req.user?.id || '0';
     const updateData: UpdateExecutionDTO = req.body;
-    
-    const execution = await executionService.submitAnswer(
-      BigInt(id),
-      userId,
-      updateData
-    );
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const execution = await executionService.submitAnswer(id, userId, updateData);
     res.json(execution);
   } catch (error) {
     next(error);
@@ -64,9 +76,13 @@ export const completeExecution = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = BigInt(req.user?.id || '0');
-    
-    const execution = await executionService.completeExecution(BigInt(id), userId);
+    const userId = req.user?.id || '0';
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const execution = await executionService.completeExecution(id, userId);
     res.json(execution);
   } catch (error) {
     next(error);
@@ -80,13 +96,13 @@ export const createExecution = async (
 ) => {
   try {
     const { planId } = req.params;
-    const userId = BigInt(req.user?.id || '0');
-    
+    const userId = req.user?.id || '0';
+
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const execution = await executionService.createExecution(BigInt(planId), userId);
+    const execution = await executionService.createExecution(planId, userId);
     res.status(201).json(execution);
   } catch (error) {
     next(error);
@@ -100,13 +116,13 @@ export const resumeTest = async (
 ) => {
   try {
     const { executionId } = req.params;
-    const userId = BigInt(req.user?.id || '0');
-    
+    const userId = req.user?.id || '0';
+
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const execution = await executionService.resumeExecution(BigInt(executionId), userId);
+    const execution = await executionService.resumeExecution(executionId, userId);
     res.status(200).json(execution);
   } catch (error) {
     next(error);
@@ -120,13 +136,13 @@ export const pauseTest = async (
 ) => {
   try {
     const { executionId } = req.params;
-    const userId = BigInt(req.user?.id || '0');
-    
+    const userId = req.user?.id || '0';
+
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const execution = await executionService.pauseExecution(BigInt(executionId), userId);
+    const execution = await executionService.pauseExecution(executionId, userId);
     res.status(200).json(execution);
   } catch (error) {
     next(error);
