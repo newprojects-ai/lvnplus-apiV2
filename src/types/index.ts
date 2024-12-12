@@ -69,18 +69,17 @@ export interface TemplateFilters {
 }
 
 export interface CreateTestPlanDTO {
-  templateId?: string | bigint;
-  boardId: number;
-  testType: 'TOPIC' | 'MIXED' | 'MENTAL_ARITHMETIC';
+  templateId?: number | null;
+  boardId?: number | null;
+  testType: 'TOPIC' | 'SUBTOPIC' | 'MIXED' | 'RANDOM';
   timingType: 'TIMED' | 'UNTIMED';
   timeLimit?: number;
-  studentId: string | bigint;
-  plannedBy: string | bigint;
+  studentId?: number | null;
+  plannedBy: number;
   configuration: {
     topics: number[];
     subtopics: number[];
-    questionCounts: Record<string, number>;
-    difficulty?: number | string;
+    totalQuestionCount: number;
   };
 }
 

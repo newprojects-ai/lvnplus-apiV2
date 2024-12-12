@@ -47,17 +47,17 @@ const templateSchema = z.object({
 });
 
 const testPlanSchema = z.object({
-  templateId: z.string().optional().nullable(),
-  boardId: z.number(),
-  testType: z.enum(['TOPIC', 'MIXED', 'MENTAL_ARITHMETIC']),
+  templateId: z.number().optional().nullable(),
+  boardId: z.number().optional().nullable(),
+  testType: z.enum(['TOPIC', 'SUBTOPIC', 'MIXED', 'RANDOM']),
   timingType: z.enum(['TIMED', 'UNTIMED']),
   timeLimit: z.number().optional(),
-  studentId: z.union([z.string(), z.number()]).transform(val => val.toString()),
-  plannedBy: z.union([z.string(), z.number()]).transform(val => val.toString()),
+  studentId: z.number().optional().nullable(),
+  plannedBy: z.number(),
   configuration: z.object({
     topics: z.array(z.number()),
     subtopics: z.array(z.number()),
-    questionCounts: z.record(z.string(), z.number()),
+    totalQuestionCount: z.number().min(1),
   }),
 });
 
