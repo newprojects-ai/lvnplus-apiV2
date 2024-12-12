@@ -943,4 +943,1182 @@ if (!id || isNaN(Number(id))) {
 - Consider adding input validation middleware
 - Update other controllers with similar validation
 
----
+### Prisma Relation Correction for Test Plans (2024-12-10)
+
+### Problem Identified
+- Incorrect relation name in Prisma query
+- Using `template` instead of `test_templates`
+- Caused `PrismaClientValidationError`
+
+### Solution Implemented
+- Updated include relations to match Prisma schema
+- Replaced `template` with `test_templates`
+- Added `exam_boards` relation
+- Ensured consistent naming with database schema
+
+### Key Changes
+- Corrected include statement in test plan query
+- Updated logging to use correct relation names
+- Maintained type safety and schema consistency
+
+### Impact
+- Resolves Prisma validation errors
+- Improves data retrieval accuracy
+- Ensures alignment with database schema
+
+### Recommendations
+- Always cross-reference Prisma schema when defining relations
+- Use schema-generated types for type safety
+- Regularly validate database queries against schema
+
+### Debugging Insights
+- Detailed logging of test plan relations
+- Captures template and exam board details
+- Provides comprehensive context for test plan creation
+
+### Test Execution Data Structure Refinement (2024-12-10)
+
+### Context
+During the investigation of test execution creation, we identified an opportunity to optimize the data structure for test executions.
+
+### Changes
+1. Simplified the test execution data structure in both `testPlan.service.ts` and `execution.service.ts`
+2. Removed unnecessary fields from the questions and responses data
+
+### Rationale
+- Aligned the data structure more closely with the database schema
+- Removed redundant fields that were not essential for test execution
+- Maintained the core functionality of tracking test questions and responses
+
+### Specific Modifications
+- Removed fields:
+  - `correct_answer`
+  - `correct_answer_plain`
+  - `solution`
+  - `solution_plain`
+  - `topic`
+  - `difficulty`
+
+- Retained critical fields:
+  - `question_id`
+  - `subtopic_id`
+  - `question_text`
+  - `options`
+  - `difficulty_level`
+
+### Existing Functionality Preservation
+- Maintained the structure of test execution creation
+- Kept the timing and response tracking mechanisms intact
+- Ensured no breaking changes to the existing test workflow
+
+### Next Steps
+- Validate the changes through comprehensive testing
+- Monitor any potential impacts on existing test execution processes
+
+### Potential Future Improvements
+- Implement more sophisticated question selection algorithms
+- Add more granular configuration options
+- Enhance caching mechanisms for question filtering
+
+### Test Execution Logic Refinement (Checkpoint 4)
+
+### Key Modifications
+
+#### TestPlan Service
+- Updated `selectQuestions` method to use `QuestionService.filterQuestions`
+- Simplified question selection logic
+- Improved parameter passing for question filtering
+- Added random question selection mechanism
+
+#### Execution Service
+- Enhanced `submitAnswer` method with more robust answer checking
+- Added methods `checkAnswer` and `determineExecutionStatus`
+- Improved test execution status management
+- Simplified response tracking and updating
+
+### Rationale
+- Improve flexibility in question selection
+- Enhance answer submission and tracking
+- Simplify data structures while maintaining functionality
+- Add more intelligent status determination for test executions
+
+### Implementation Details
+- Integrated direct filtering from QuestionService
+- Added logic to dynamically check answer correctness
+- Implemented status tracking based on answer completion
+
+### Next Steps
+- Comprehensive testing of the new question selection and answer submission logic
+- Validate the robustness of the new implementation across different test scenarios
+
+### BigInt Conversion and Error Handling Improvements (Checkpoint 5)
+
+### Key Modifications
+
+#### TestPlan Service
+- Enhanced BigInt conversion for all ID fields
+- Improved question selection logic
+- Simplified random question selection method
+- Removed unnecessary helper methods
+- Improved type safety for ID conversions
+
+#### Execution Service
+- Added robust BigInt conversion for execution and user IDs
+- Improved access control checks
+- Enhanced type safety in method parameters
+- Simplified ID comparison and access validation
+
+### Rationale
+- Resolve type conversion errors when handling IDs
+- Improve type safety and prevent potential runtime errors
+- Simplify complex logic and remove redundant code
+- Ensure consistent ID handling across services
+
+### Implementation Details
+- Added explicit BigInt conversion using `BigInt()` function
+- Simplified access control logic
+- Removed unnecessary type checking and conversion methods
+- Improved error handling for ID-related operations
+
+### Potential Issues Addressed
+- Resolved 'Cannot convert undefined to a BigInt' errors
+- Fixed type conversion issues in question filtering
+- Improved robustness of database query parameters
+
+### Next Steps
+- Comprehensive testing of ID conversion and access control logic
+- Monitor for any remaining type-related issues
+- Consider adding more robust type validation if needed
+
+### Question Filtering and Test Plan Creation Improvements (Checkpoint 6)
+
+### Key Modifications
+
+#### TestPlan Service
+- Fixed handling of `filterQuestions` method return value
+- Correctly extract `data` from question filtering result
+- Updated filter parameters to match QuestionService method signature
+- Improved parsing of question options
+- Enhanced error handling for insufficient questions
+
+#### Specific Changes
+- Changed `subtopic_ids` to `subtopicId` in filter parameters
+- Adjusted difficulty level parameter naming
+- Added explicit parsing of JSON-stringified options
+- Ensured consistent use of `question_id` instead of `id`
+
+### Rationale
+- Resolve "questions is not iterable" error
+- Improve compatibility between TestPlan and QuestionService
+- Ensure robust handling of question filtering results
+- Maintain type safety and consistent data structures
+
+### Implementation Details
+- Explicitly extract `data` from QuestionService result
+- Use first subtopic when multiple are provided
+- Dynamically determine difficulty level from question counts
+- Parse options to ensure correct data format
+
+### Potential Issues Addressed
+- Fixed type conversion errors in question selection
+- Resolved inconsistencies in question data structure
+- Improved error handling for question filtering
+
+### Next Steps
+- Comprehensive testing of question filtering and test plan creation
+- Validate handling of multiple subtopics and difficulty levels
+- Monitor for any remaining data transformation issues
+
+### Prisma Type Conversion and Query Optimization (Checkpoint 7)
+
+### Key Modifications
+
+#### QuestionService
+- Implemented explicit type conversions for Prisma queries
+- Added `Number()` conversion for ID fields
+- Added `String()` conversion for difficulty levels
+- Improved default handling for pagination parameters
+
+#### TestPlan Service
+- Updated type conversions to match Prisma requirements
+- Converted BigInt IDs to Number for database operations
+- Enhanced difficulty level and question count determination
+- Improved handling of optional ID fields
+
+### Rationale
+- Resolve Prisma type validation errors
+- Ensure consistent type handling across services
+- Improve query reliability and performance
+- Handle edge cases in ID and parameter conversions
+
+### Implementation Details
+- Use `Number()` for converting BigInt to database-compatible integers
+- Use `String()` for converting difficulty levels
+- Add default values for optional query parameters
+- Safely handle null or undefined ID fields
+
+### Specific Changes
+- Converted `subtopic_id`, `topic_id`, and `board_id` to `Number()`
+- Converted difficulty levels to `String()`
+- Added fallback values for offset and limit
+- Improved error handling for insufficient questions
+
+### Potential Issues Addressed
+- Resolved `PrismaClientValidationError` for ID type mismatches
+- Fixed type conversion issues in question filtering
+- Improved robustness of database query parameters
+
+### Next Steps
+- Comprehensive testing of type conversion logic
+- Validate query performance with converted types
+- Monitor for any remaining type-related issues in Prisma queries
+
+### Difficulty Level Mapping and Integer Conversion (Checkpoint 8)
+
+### Key Modifications
+
+#### QuestionService
+- Implemented a comprehensive difficulty level mapping
+- Converted difficulty levels to integers for database queries
+- Added support for string and numeric difficulty inputs
+- Improved flexibility in difficulty level handling
+
+#### TestPlan Service
+- Integrated difficulty level mapping
+- Added fallback mechanism for difficulty level selection
+- Ensured consistent integer conversion for difficulty levels
+- Improved robustness of difficulty-based filtering
+
+### Rationale
+- Resolve Prisma type validation errors for difficulty levels
+- Provide a flexible and consistent approach to difficulty mapping
+- Support multiple input formats for difficulty levels
+- Improve query reliability and type safety
+
+### Implementation Details
+- Created a `difficultyMap` to convert string and numeric inputs
+- Mapped difficulty levels: 
+  - 'EASY': 1
+  - 'MEDIUM': 2
+  - 'HARD': 3
+  - Numeric mappings for '1', '2', '3', '4'
+- Default to 'MEDIUM' (2) if no valid difficulty is provided
+- Explicit conversion using `Number()` for database queries
+
+### Specific Changes
+- Added type-safe difficulty level conversion
+- Supported multiple input formats (string and numeric)
+- Improved error handling for difficulty level selection
+- Ensured consistent integer representation
+
+### Potential Issues Addressed
+- Resolved `PrismaClientValidationError` for difficulty levels
+- Improved flexibility in difficulty level specification
+- Added robust type conversion for database queries
+
+### Next Steps
+- Comprehensive testing of difficulty level mapping
+- Validate query performance with new conversion logic
+- Consider expanding difficulty level support if needed
+- Monitor for any edge cases in difficulty level handling
+
+### Flexible Question Filtering and Test Plan Configuration (Checkpoint 9)
+
+### Key Modifications
+
+#### TestPlan Service
+- Enhanced handling of question count configuration
+- Added support for multiple configuration formats
+- Implemented flexible parsing of question counts
+- Improved topic and difficulty level detection
+
+#### QuestionService
+- Expanded filtering capabilities for questions
+- Added more robust topic and subtopic-based filtering
+- Improved handling of complex query parameters
+- Enhanced flexibility in question selection
+
+### Rationale
+- Provide more flexible test plan creation
+- Support various ways of specifying question requirements
+- Improve question selection logic
+- Handle different configuration formats
+
+### Implementation Details
+- Added multi-format support for question counts
+  - Topic ID-based counting
+  - Difficulty level-based counting
+  - Fallback to default counting mechanism
+- Implemented dynamic total question calculation
+- Added optional topic filtering in question selection
+
+### Specific Changes
+- Support for question counts using:
+  - Topic IDs as keys
+  - Difficulty levels as keys
+- Flexible difficulty level detection
+- Enhanced logging of filter parameters
+- More informative error messages
+
+### Configuration Handling
+- Detect question count configuration type
+- Convert topic and subtopic IDs safely
+- Handle cases with mixed or unexpected configuration formats
+- Provide sensible defaults when configuration is ambiguous
+
+### Potential Issues Addressed
+- Resolved inflexibility in test plan creation
+- Improved handling of different input formats
+- Enhanced error reporting for question selection
+- Added more robust filtering mechanisms
+
+### Next Steps
+- Comprehensive testing of new configuration handling
+- Validate flexibility of question selection
+- Consider adding more advanced filtering options
+- Monitor performance of new filtering approach
+
+### Test Plan Configuration Enhancements (Checkpoint 5)
+
+### Question Filtering Improvements
+- Enhanced `filterQuestions` method in `question.service.ts` to support:
+  - Dynamic difficulty level adjustment
+  - Flexible input handling for difficulty levels (string and numeric)
+  - Intelligent fallback when not enough questions are available at a specific difficulty
+
+### Test Plan Creation Updates
+- Updated `createTestPlan` method in `testPlan.service.ts` to:
+  - Preserve original configuration in test plan storage
+  - Support multiple configuration formats (topic IDs, difficulty levels)
+  - Improve error handling and logging
+  - Dynamically select questions based on configuration
+
+### Type System Improvements
+- Added `FilterQuestionParams` and `FilterQuestionResponse` interfaces
+- Supported more flexible type conversions
+- Improved type safety for question filtering and test plan creation
+
+### Key Modifications
+1. **Difficulty Level Handling**
+   - Implemented a comprehensive difficulty mapping
+   - Support for converting string and numeric difficulty inputs
+   - Fallback mechanism for insufficient questions
+
+2. **Configuration Flexibility**
+   - Can now specify question counts by:
+     - Topic IDs
+     - Difficulty levels
+     - Mixed configurations
+
+3. **Logging and Debugging**
+   - Added more detailed console logging
+   - Improved error messages for question availability
+
+### Potential Future Improvements
+- Implement more sophisticated question selection algorithms
+- Add more granular configuration options
+- Enhance caching mechanisms for question filtering
+
+### Database Relationship Handling (Checkpoint 5.1)
+
+### Question Filtering Improvements
+- Fixed issue with `topicId` filtering by leveraging Prisma's nested query capabilities
+- Added support for querying questions through the `subtopics` relationship
+- Enhanced query to include topic information in the response
+
+### Key Changes
+1. **Relationship Traversal**
+   - Questions are now filtered using a nested query through `subtopics`
+   - Dynamically handle `topicId` filtering without direct `topic_id` field
+   - Included topic details in the response for better context
+
+2. **Query Flexibility**
+   - Maintained existing difficulty and subtopic filtering
+   - Added intelligent fallback for question availability
+   - Improved error handling and logging
+
+### Technical Details
+- Used Prisma's `include` feature to fetch related topic information
+- Mapped response to include `topicId` and `topicName`
+- Preserved existing filtering and pagination logic
+
+### Potential Future Improvements
+- Optimize query performance for complex nested relationships
+- Add more advanced filtering options
+- Implement caching for frequently accessed topic-question mappings
+
+### Question Distribution Strategy (Checkpoint 5.5)
+
+### Comprehensive Difficulty Distribution
+- Implemented an intelligent distribution mechanism for questions
+- Covers all difficulty levels from 1 to 5
+
+### Distribution Logic
+- Total questions are divided equally across difficulty levels 1, 2, 3, 4, and 5
+- Uses floor division to ensure balanced distribution
+- Handles remainder questions by distributing to initial difficulty levels
+
+### Example Scenarios
+- 15 total questions:
+  - Each difficulty level: 3 questions
+    - Level 1: 3 questions
+    - Level 2: 3 questions
+    - Level 3: 3 questions
+    - Level 4: 3 questions
+    - Level 5: 3 questions
+
+- 17 total questions:
+  - Levels 1-2: 4 questions
+  - Levels 3-5: 3 questions
+
+- 20 total questions:
+  - 4 questions per difficulty level
+
+### Key Features
+- Ensures comprehensive coverage of difficulty spectrum
+- Maintains flexibility in question configuration
+- Provides predictable question distribution across all levels
+
+### Potential Improvements
+- Add configurable difficulty weights
+- Implement more advanced distribution algorithms
+- Enhance logging for distribution strategy
+
+### Question Distribution Implementation (2024-12-10)
+
+#### What
+- Creating a separate utility for question distribution across difficulty levels
+- Moving the distribution logic out of the test plan creation flow
+- Maintaining the existing test plan creation functionality
+
+#### Why
+- To make the difficulty level distribution configurable
+- To separate concerns and improve maintainability
+- To allow for future modifications to distribution logic without affecting core functionality
+
+#### How
+1. Create a new utility file for question distribution
+2. Implement the current distribution logic:
+   - Equal distribution across levels 1-5
+   - Floor division for base distribution
+   - Remainder questions go to lower levels
+3. Keep the existing test plan creation flow intact
+4. Only modify the question count generation
+
+#### Implementation Details
+- Location: `src/utils/questionDistribution.ts`
+- Current Logic:
+  ```typescript
+  Example: 13 questions total
+  - Base: floor(13/5) = 2 per level
+  - Remainder: 13 % 5 = 3
+  - Distribution: {1: 3, 2: 3, 3: 3, 4: 2, 5: 2}
+  ```
+
+#### Testing Notes
+- Verify test plan creation still works
+- Confirm question counts sum equals total requested
+- Check distribution across difficulty levels
+
+### Question Distribution Utility Implementation (2024-12-11)
+
+#### Utility Overview
+- Created `src/utils/questionDistribution.ts`
+- Implemented flexible question distribution mechanism
+- Supports configurable difficulty levels (1-5)
+
+#### Key Functions
+1. `distributeQuestions(totalQuestions, levels)`
+   - Distributes questions across specified difficulty levels
+   - Default is 3 levels (Easy, Medium, Hard)
+   - Handles remainders by adding to initial levels
+   - Validates input and ensures distribution is within 1-5 levels
+
+2. `validateQuestionDistribution(distribution)`
+   - Validates the generated question distribution
+   - Ensures all levels are between 1-5
+   - Checks that total questions match the input
+
+#### Distribution Strategy
+- Uses floor division for base distribution
+- Adds remainder questions to initial levels
+- Supports dynamic level count (1-5)
+
+#### Example Distributions
+```typescript
+distributeQuestions(13)  // { 1: 5, 2: 4, 3: 4 }
+distributeQuestions(10, 5)  // { 1: 2, 2: 2, 3: 2, 4: 2, 5: 2 }
+```
+
+#### Benefits
+- Configurable and flexible
+- Maintains consistent distribution logic
+- Easy to test and maintain
+- Supports future expansion of difficulty levels
+
+#### Integration
+- Used in `testPlan.service.ts` for question selection
+- Enhances test plan creation process
+- Improves question allocation strategy
+
+#### Next Steps
+- Add comprehensive unit tests
+- Consider performance optimizations
+- Explore additional distribution strategies
+
+#### Recommendations
+- Validate distribution results in test scenarios
+- Monitor test plan creation with new utility
+- Gather feedback on distribution effectiveness
+
+### BigInt Conversion and Error Handling Improvements (2024-12-11 at 09:45:33 UTC)
+
+#### Timestamp
+- **Date**: 2024-12-11
+- **Time**: 09:45:33 UTC
+- **Logged By**: Cascade AI Assistant
+
+#### Problem Identification
+- `safeBigInt` utility silently failing and returning `0n` for invalid inputs
+- Insufficient validation in execution controller
+- Poor error messages for invalid execution IDs
+
+#### Changes Made
+1. **Enhanced safeBigInt Utility**
+   - Added validation for empty strings
+   - Improved error handling for invalid BigInt values
+   - Added detailed error logging with value type information
+   - Now throws ValidationError instead of returning default value
+
+2. **Execution Controller Improvements**
+   - Added validation for execution ID format
+   - Improved error messages for missing user ID
+   - Removed default '0' value for missing user ID
+
+#### Implementation Details
+```typescript
+// Updated safeBigInt implementation
+private safeBigInt(value: bigint | string | undefined, defaultValue: bigint = BigInt(0)): bigint {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  
+  try {
+    if (typeof value === 'string' && value.trim() === '') {
+      throw new Error('Empty string is not a valid BigInt');
+    }
+    
+    const result = typeof value === 'string' ? BigInt(value) : value;
+    
+    if (result === BigInt(0) && value !== '0' && value !== 0n) {
+      throw new Error(`Invalid BigInt value: ${value}`);
+    }
+    
+    return result;
+  } catch (error) {
+    throw new ValidationError(`Invalid execution ID: ${value}`);
+  }
+}
+
+// Updated controller validation
+if (!id || isNaN(Number(id))) {
+  return res.status(400).json({ message: 'Invalid execution ID provided' });
+}
+```
+
+#### Rationale
+- Prevent silent failures in BigInt conversion
+- Provide better error messages for debugging
+- Improve input validation at controller level
+
+#### Benefits
+- More reliable execution ID handling
+- Better error messages for debugging
+- Improved validation at multiple levels
+
+#### Next Steps
+- Monitor error logs for any new patterns
+- Consider adding input validation middleware
+- Update other controllers with similar validation
+
+### Prisma Relation Correction for Test Plans (2024-12-10)
+
+### Problem Identified
+- Incorrect relation name in Prisma query
+- Using `template` instead of `test_templates`
+- Caused `PrismaClientValidationError`
+
+### Solution Implemented
+- Updated include relations to match Prisma schema
+- Replaced `template` with `test_templates`
+- Added `exam_boards` relation
+- Ensured consistent naming with database schema
+
+### Key Changes
+- Corrected include statement in test plan query
+- Updated logging to use correct relation names
+- Maintained type safety and schema consistency
+
+### Impact
+- Resolves Prisma validation errors
+- Improves data retrieval accuracy
+- Ensures alignment with database schema
+
+### Recommendations
+- Always cross-reference Prisma schema when defining relations
+- Use schema-generated types for type safety
+- Regularly validate database queries against schema
+
+### Debugging Insights
+- Detailed logging of test plan relations
+- Captures template and exam board details
+- Provides comprehensive context for test plan creation
+
+### Test Execution Data Structure Refinement (2024-12-10)
+
+### Context
+During the investigation of test execution creation, we identified an opportunity to optimize the data structure for test executions.
+
+### Changes
+1. Simplified the test execution data structure in both `testPlan.service.ts` and `execution.service.ts`
+2. Removed unnecessary fields from the questions and responses data
+
+### Rationale
+- Aligned the data structure more closely with the database schema
+- Removed redundant fields that were not essential for test execution
+- Maintained the core functionality of tracking test questions and responses
+
+### Specific Modifications
+- Removed fields:
+  - `correct_answer`
+  - `correct_answer_plain`
+  - `solution`
+  - `solution_plain`
+  - `topic`
+  - `difficulty`
+
+- Retained critical fields:
+  - `question_id`
+  - `subtopic_id`
+  - `question_text`
+  - `options`
+  - `difficulty_level`
+
+### Existing Functionality Preservation
+- Maintained the structure of test execution creation
+- Kept the timing and response tracking mechanisms intact
+- Ensured no breaking changes to the existing test workflow
+
+### Next Steps
+- Validate the changes through comprehensive testing
+- Monitor any potential impacts on existing test execution processes
+
+### Potential Future Improvements
+- Implement more sophisticated question selection algorithms
+- Add more granular configuration options
+- Enhance caching mechanisms for question filtering
+
+### Test Execution Logic Refinement (Checkpoint 4)
+
+### Key Modifications
+
+#### TestPlan Service
+- Updated `selectQuestions` method to use `QuestionService.filterQuestions`
+- Simplified question selection logic
+- Improved parameter passing for question filtering
+- Added random question selection mechanism
+
+#### Execution Service
+- Enhanced `submitAnswer` method with more robust answer checking
+- Added methods `checkAnswer` and `determineExecutionStatus`
+- Improved test execution status management
+- Simplified response tracking and updating
+
+### Rationale
+- Improve flexibility in question selection
+- Enhance answer submission and tracking
+- Simplify data structures while maintaining functionality
+- Add more intelligent status determination for test executions
+
+### Implementation Details
+- Integrated direct filtering from QuestionService
+- Added logic to dynamically check answer correctness
+- Implemented status tracking based on answer completion
+
+### Next Steps
+- Comprehensive testing of the new question selection and answer submission logic
+- Validate the robustness of the new implementation across different test scenarios
+
+### BigInt Conversion and Error Handling Improvements (Checkpoint 5)
+
+### Key Modifications
+
+#### TestPlan Service
+- Enhanced BigInt conversion for all ID fields
+- Improved question selection logic
+- Simplified random question selection method
+- Removed unnecessary helper methods
+- Improved type safety for ID conversions
+
+#### Execution Service
+- Added robust BigInt conversion for execution and user IDs
+- Improved access control checks
+- Enhanced type safety in method parameters
+- Simplified ID comparison and access validation
+
+### Rationale
+- Resolve type conversion errors when handling IDs
+- Improve type safety and prevent potential runtime errors
+- Simplify complex logic and remove redundant code
+- Ensure consistent ID handling across services
+
+### Implementation Details
+- Added explicit BigInt conversion using `BigInt()` function
+- Simplified access control logic
+- Removed unnecessary type checking and conversion methods
+- Improved error handling for ID-related operations
+
+### Potential Issues Addressed
+- Resolved 'Cannot convert undefined to a BigInt' errors
+- Fixed type conversion issues in question filtering
+- Improved robustness of database query parameters
+
+### Next Steps
+- Comprehensive testing of ID conversion and access control logic
+- Monitor for any remaining type-related issues
+- Consider adding more robust type validation if needed
+
+### Question Filtering and Test Plan Creation Improvements (Checkpoint 6)
+
+### Key Modifications
+
+#### TestPlan Service
+- Fixed handling of `filterQuestions` method return value
+- Correctly extract `data` from question filtering result
+- Updated filter parameters to match QuestionService method signature
+- Improved parsing of question options
+- Enhanced error handling for insufficient questions
+
+#### Specific Changes
+- Changed `subtopic_ids` to `subtopicId` in filter parameters
+- Adjusted difficulty level parameter naming
+- Added explicit parsing of JSON-stringified options
+- Ensured consistent use of `question_id` instead of `id`
+
+### Rationale
+- Resolve "questions is not iterable" error
+- Improve compatibility between TestPlan and QuestionService
+- Ensure robust handling of question filtering results
+- Maintain type safety and consistent data structures
+
+### Implementation Details
+- Explicitly extract `data` from QuestionService result
+- Use first subtopic when multiple are provided
+- Dynamically determine difficulty level from question counts
+- Parse options to ensure correct data format
+
+### Potential Issues Addressed
+- Fixed type conversion errors in question selection
+- Resolved inconsistencies in question data structure
+- Improved error handling for question filtering
+
+### Next Steps
+- Comprehensive testing of question filtering and test plan creation
+- Validate handling of multiple subtopics and difficulty levels
+- Monitor for any remaining data transformation issues
+
+### Prisma Type Conversion and Query Optimization (Checkpoint 7)
+
+### Key Modifications
+
+#### QuestionService
+- Implemented explicit type conversions for Prisma queries
+- Added `Number()` conversion for ID fields
+- Added `String()` conversion for difficulty levels
+- Improved default handling for pagination parameters
+
+#### TestPlan Service
+- Updated type conversions to match Prisma requirements
+- Converted BigInt IDs to Number for database operations
+- Enhanced difficulty level and question count determination
+- Improved handling of optional ID fields
+
+### Rationale
+- Resolve Prisma type validation errors
+- Ensure consistent type handling across services
+- Improve query reliability and performance
+- Handle edge cases in ID and parameter conversions
+
+### Implementation Details
+- Use `Number()` for converting BigInt to database-compatible integers
+- Use `String()` for converting difficulty levels
+- Add default values for optional query parameters
+- Safely handle null or undefined ID fields
+
+### Specific Changes
+- Converted `subtopic_id`, `topic_id`, and `board_id` to `Number()`
+- Converted difficulty levels to `String()`
+- Added fallback values for offset and limit
+- Improved error handling for insufficient questions
+
+### Potential Issues Addressed
+- Resolved `PrismaClientValidationError` for ID type mismatches
+- Fixed type conversion issues in question filtering
+- Improved robustness of database query parameters
+
+### Next Steps
+- Comprehensive testing of type conversion logic
+- Validate query performance with converted types
+- Monitor for any remaining type-related issues in Prisma queries
+
+### Difficulty Level Mapping and Integer Conversion (Checkpoint 8)
+
+### Key Modifications
+
+#### QuestionService
+- Implemented a comprehensive difficulty level mapping
+- Converted difficulty levels to integers for database queries
+- Added support for string and numeric difficulty inputs
+- Improved flexibility in difficulty level handling
+
+#### TestPlan Service
+- Integrated difficulty level mapping
+- Added fallback mechanism for difficulty level selection
+- Ensured consistent integer conversion for difficulty levels
+- Improved robustness of difficulty-based filtering
+
+### Rationale
+- Resolve Prisma type validation errors for difficulty levels
+- Provide a flexible and consistent approach to difficulty mapping
+- Support multiple input formats for difficulty levels
+- Improve query reliability and type safety
+
+### Implementation Details
+- Created a `difficultyMap` to convert string and numeric inputs
+- Mapped difficulty levels: 
+  - 'EASY': 1
+  - 'MEDIUM': 2
+  - 'HARD': 3
+  - Numeric mappings for '1', '2', '3', '4'
+- Default to 'MEDIUM' (2) if no valid difficulty is provided
+- Explicit conversion using `Number()` for database queries
+
+### Specific Changes
+- Added type-safe difficulty level conversion
+- Supported multiple input formats (string and numeric)
+- Improved error handling for difficulty level selection
+- Ensured consistent integer representation
+
+### Potential Issues Addressed
+- Resolved `PrismaClientValidationError` for difficulty levels
+- Improved flexibility in difficulty level specification
+- Added robust type conversion for database queries
+
+### Next Steps
+- Comprehensive testing of difficulty level mapping
+- Validate query performance with new conversion logic
+- Consider expanding difficulty level support if needed
+- Monitor for any edge cases in difficulty level handling
+
+### Flexible Question Filtering and Test Plan Configuration (Checkpoint 9)
+
+### Key Modifications
+
+#### TestPlan Service
+- Enhanced handling of question count configuration
+- Added support for multiple configuration formats
+- Implemented flexible parsing of question counts
+- Improved topic and difficulty level detection
+
+#### QuestionService
+- Expanded filtering capabilities for questions
+- Added more robust topic and subtopic-based filtering
+- Improved handling of complex query parameters
+- Enhanced flexibility in question selection
+
+### Rationale
+- Provide more flexible test plan creation
+- Support various ways of specifying question requirements
+- Improve question selection logic
+- Handle different configuration formats
+
+### Implementation Details
+- Added multi-format support for question counts
+  - Topic ID-based counting
+  - Difficulty level-based counting
+  - Fallback to default counting mechanism
+- Implemented dynamic total question calculation
+- Added optional topic filtering in question selection
+
+### Specific Changes
+- Support for question counts using:
+  - Topic IDs as keys
+  - Difficulty levels as keys
+- Flexible difficulty level detection
+- Enhanced logging of filter parameters
+- More informative error messages
+
+### Configuration Handling
+- Detect question count configuration type
+- Convert topic and subtopic IDs safely
+- Handle cases with mixed or unexpected configuration formats
+- Provide sensible defaults when configuration is ambiguous
+
+### Potential Issues Addressed
+- Resolved inflexibility in test plan creation
+- Improved handling of different input formats
+- Enhanced error reporting for question selection
+- Added more robust filtering mechanisms
+
+### Next Steps
+- Comprehensive testing of new configuration handling
+- Validate flexibility of question selection
+- Consider adding more advanced filtering options
+- Monitor performance of new filtering approach
+
+### Test Plan Configuration Enhancements (Checkpoint 5)
+
+### Question Filtering Improvements
+- Enhanced `filterQuestions` method in `question.service.ts` to support:
+  - Dynamic difficulty level adjustment
+  - Flexible input handling for difficulty levels (string and numeric)
+  - Intelligent fallback when not enough questions are available at a specific difficulty
+
+### Test Plan Creation Updates
+- Updated `createTestPlan` method in `testPlan.service.ts` to:
+  - Preserve original configuration in test plan storage
+  - Support multiple configuration formats (topic IDs, difficulty levels)
+  - Improve error handling and logging
+  - Dynamically select questions based on configuration
+
+### Type System Improvements
+- Added `FilterQuestionParams` and `FilterQuestionResponse` interfaces
+- Supported more flexible type conversions
+- Improved type safety for question filtering and test plan creation
+
+### Key Modifications
+1. **Difficulty Level Handling**
+   - Implemented a comprehensive difficulty mapping
+   - Support for converting string and numeric difficulty inputs
+   - Fallback mechanism for insufficient questions
+
+2. **Configuration Flexibility**
+   - Can now specify question counts by:
+     - Topic IDs
+     - Difficulty levels
+     - Mixed configurations
+
+3. **Logging and Debugging**
+   - Added more detailed console logging
+   - Improved error messages for question availability
+
+### Potential Future Improvements
+- Implement more sophisticated question selection algorithms
+- Add more granular configuration options
+- Enhance caching mechanisms for question filtering
+
+### Database Relationship Handling (Checkpoint 5.1)
+
+### Question Filtering Improvements
+- Fixed issue with `topicId` filtering by leveraging Prisma's nested query capabilities
+- Added support for querying questions through the `subtopics` relationship
+- Enhanced query to include topic information in the response
+
+### Key Changes
+1. **Relationship Traversal**
+   - Questions are now filtered using a nested query through `subtopics`
+   - Dynamically handle `topicId` filtering without direct `topic_id` field
+   - Included topic details in the response for better context
+
+2. **Query Flexibility**
+   - Maintained existing difficulty and subtopic filtering
+   - Added intelligent fallback for question availability
+   - Improved error handling and logging
+
+### Technical Details
+- Used Prisma's `include` feature to fetch related topic information
+- Mapped response to include `topicId` and `topicName`
+- Preserved existing filtering and pagination logic
+
+### Potential Future Improvements
+- Optimize query performance for complex nested relationships
+- Add more advanced filtering options
+- Implement caching for frequently accessed topic-question mappings
+
+### Question Distribution Strategy (Checkpoint 5.5)
+
+### Comprehensive Difficulty Distribution
+- Implemented an intelligent distribution mechanism for questions
+- Covers all difficulty levels from 1 to 5
+
+### Distribution Logic
+- Total questions are divided equally across difficulty levels 1, 2, 3, 4, and 5
+- Uses floor division to ensure balanced distribution
+- Handles remainder questions by distributing to initial difficulty levels
+
+### Example Scenarios
+- 15 total questions:
+  - Each difficulty level: 3 questions
+    - Level 1: 3 questions
+    - Level 2: 3 questions
+    - Level 3: 3 questions
+    - Level 4: 3 questions
+    - Level 5: 3 questions
+
+- 17 total questions:
+  - Levels 1-2: 4 questions
+  - Levels 3-5: 3 questions
+
+- 20 total questions:
+  - 4 questions per difficulty level
+
+### Key Features
+- Ensures comprehensive coverage of difficulty spectrum
+- Maintains flexibility in question configuration
+- Provides predictable question distribution across all levels
+
+### Potential Improvements
+- Add configurable difficulty weights
+- Implement more advanced distribution algorithms
+- Enhance logging for distribution strategy
+
+### Question Distribution Implementation (2024-12-10)
+
+#### What
+- Creating a separate utility for question distribution across difficulty levels
+- Moving the distribution logic out of the test plan creation flow
+- Maintaining the existing test plan creation functionality
+
+#### Why
+- To make the difficulty level distribution configurable
+- To separate concerns and improve maintainability
+- To allow for future modifications to distribution logic without affecting core functionality
+
+#### How
+1. Create a new utility file for question distribution
+2. Implement the current distribution logic:
+   - Equal distribution across levels 1-5
+   - Floor division for base distribution
+   - Remainder questions go to lower levels
+3. Keep the existing test plan creation flow intact
+4. Only modify the question count generation
+
+#### Implementation Details
+- Location: `src/utils/questionDistribution.ts`
+- Current Logic:
+  ```typescript
+  Example: 13 questions total
+  - Base: floor(13/5) = 2 per level
+  - Remainder: 13 % 5 = 3
+  - Distribution: {1: 3, 2: 3, 3: 3, 4: 2, 5: 2}
+  ```
+
+#### Testing Notes
+- Verify test plan creation still works
+- Confirm question counts sum equals total requested
+- Check distribution across difficulty levels
+
+### Question Distribution Utility Implementation (2024-12-11)
+
+#### Utility Overview
+- Created `src/utils/questionDistribution.ts`
+- Implemented flexible question distribution mechanism
+- Supports configurable difficulty levels (1-5)
+
+#### Key Functions
+1. `distributeQuestions(totalQuestions, levels)`
+   - Distributes questions across specified difficulty levels
+   - Default is 3 levels (Easy, Medium, Hard)
+   - Handles remainders by adding to initial levels
+   - Validates input and ensures distribution is within 1-5 levels
+
+2. `validateQuestionDistribution(distribution)`
+   - Validates the generated question distribution
+   - Ensures all levels are between 1-5
+   - Checks that total questions match the input
+
+#### Distribution Strategy
+- Uses floor division for base distribution
+- Adds remainder questions to initial levels
+- Supports dynamic level count (1-5)
+
+#### Example Distributions
+```typescript
+distributeQuestions(13)  // { 1: 5, 2: 4, 3: 4 }
+distributeQuestions(10, 5)  // { 1: 2, 2: 2, 3: 2, 4: 2, 5: 2 }
+```
+
+#### Benefits
+- Configurable and flexible
+- Maintains consistent distribution logic
+- Easy to test and maintain
+- Supports future expansion of difficulty levels
+
+#### Integration
+- Used in `testPlan.service.ts` for question selection
+- Enhances test plan creation process
+- Improves question allocation strategy
+
+#### Next Steps
+- Add comprehensive unit tests
+- Consider performance optimizations
+- Explore additional distribution strategies
+
+#### Recommendations
+- Validate distribution results in test scenarios
+- Monitor test plan creation with new utility
+- Gather feedback on distribution effectiveness
+
+### BigInt Conversion and Error Handling Improvements (2024-12-11 at 09:45:33 UTC)
+
+#### Timestamp
+- **Date**: 2024-12-11
+- **Time**: 09:45:33 UTC
+- **Logged By**: Cascade AI Assistant
+
+#### Problem Identification
+- `safeBigInt` utility silently failing and returning `0n` for invalid inputs
+- Insufficient validation in execution controller
+- Poor error messages for invalid execution IDs
+
+#### Changes Made
+1. **Enhanced safeBigInt Utility**
+   - Added validation for empty strings
+   - Improved error handling for invalid BigInt values
+   - Added detailed error logging with value type information
+   - Now throws ValidationError instead of returning default value
+
+2. **Execution Controller Improvements**
+   - Added validation for execution ID format
+   - Improved error messages for missing user ID
+   - Removed default '0' value for missing user ID
+
+#### Implementation Details
+```typescript
+// Updated safeBigInt implementation
+private safeBigInt(value: bigint | string | undefined, defaultValue: bigint = BigInt(0)): bigint {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  
+  try {
+    if (typeof value === 'string' && value.trim() === '') {
+      throw new Error('Empty string is not a valid BigInt');
+    }
+    
+    const result = typeof value === 'string' ? BigInt(value) : value;
+    
+    if (result === BigInt(0) && value !== '0' && value !== 0n) {
+      throw new Error(`Invalid BigInt value: ${value}`);
+    }
+    
+    return result;
+  } catch (error) {
+    throw new ValidationError(`Invalid execution ID: ${value}`);
+  }
+}
+
+// Updated controller validation
+if (!id || isNaN(Number(id))) {
+  return res.status(400).json({ message: 'Invalid execution ID provided' });
+}

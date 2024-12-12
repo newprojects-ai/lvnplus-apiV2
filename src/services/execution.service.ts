@@ -12,10 +12,7 @@ import {
 } from '../utils/errors';
 
 interface ExecutionWithPlan extends Prisma.test_executions {
-  test_plans: Prisma.test_plans & {
-    users_test_plans_student_idTousers: { user_id: bigint }[];
-    users_test_plans_planned_byTousers: { user_id: bigint }[];
-  };
+  test_plans: Prisma.test_plans;
 }
 
 interface TestData {
@@ -354,63 +351,88 @@ export class TestExecutionService {
     executionId: bigint | string | undefined,
     userId: bigint | string | undefined
   ): Promise<ExecutionWithPlan> {
-    // Safely convert inputs to bigint with default values
-    const safeExecutionId = this.safeBigInt(executionId);
-    const safeUserId = this.safeBigInt(userId);
+    try {
+      // Safely convert inputs to bigint with default values
+      const safeExecutionId = this.safeBigInt(executionId);
+      const safeUserId = this.safeBigInt(userId);
 
-    console.log('Finding execution with:', {
-      executionId: safeExecutionId,
-      userId: safeUserId
-    });
+      console.log('Finding execution with:', {
+        executionId: safeExecutionId.toString(),
+        userId: safeUserId.toString()
+      });
 
-    const execution = await prisma.test_executions.findUnique({
-      where: { 
-        execution_id: safeExecutionId 
-      },
-      include: {
-        test_plans: {
-          include: {
-            users_test_plans_student_idTousers: true,
-            users_test_plans_planned_byTousers: true
-          }
+      // First find the execution with its test plan
+      const execution = await prisma.test_executions.findUnique({
+        where: { 
+          execution_id: safeExecutionId 
+        },
+        include: {
+          test_plans: true
         }
-      }
-    });
-
-    // Enhanced logging for debugging
-    if (!execution) {
-      console.error('No execution found with ID:', safeExecutionId);
-      
-      // Check if the execution exists without the include
-      const baseExecution = await prisma.test_executions.findUnique({
-        where: { execution_id: safeExecutionId }
       });
 
-      if (baseExecution) {
-        console.log('Base execution exists:', baseExecution);
+      // Enhanced logging for debugging
+      if (!execution) {
+        console.error('No execution found with ID:', safeExecutionId.toString());
+        throw new NotFoundError(`Test execution not found for ID: ${safeExecutionId.toString()}`);
       }
 
-      throw new NotFoundError(`Test execution not found for ID: ${safeExecutionId}`);
-    }
-
-    // Check if the user is associated with the test plan
-    const isAssociatedStudent = execution.test_plans.users_test_plans_student_idTousers
-      .some(student => student.user_id === safeUserId);
-  
-    const isAssociatedPlanner = execution.test_plans.users_test_plans_planned_byTousers
-      .some(planner => planner.user_id === safeUserId);
-
-    if (!isAssociatedStudent && !isAssociatedPlanner) {
-      console.error('Unauthorized access attempt:', {
-        executionId: safeExecutionId,
-        userId: safeUserId,
-        studentIds: execution.test_plans.users_test_plans_student_idTousers.map(s => s.user_id),
-        plannerIds: execution.test_plans.users_test_plans_planned_byTousers.map(p => p.user_id)
+      // Log execution details for debugging
+      console.log('Found execution:', {
+        id: execution.execution_id.toString(),
+        status: execution.status,
+        planId: execution.test_plan_id.toString()
       });
-      throw new UnauthorizedError('You are not authorized to access this test execution');
-    }
 
-    return execution;
+      // Check if the test plan exists
+      if (!execution.test_plans) {
+        console.error('No test plan found for execution:', safeExecutionId.toString());
+        throw new ValidationError('Test execution has no associated test plan');
+      }
+
+      // Now check if the user has access to this test plan
+      const hasAccess = await prisma.test_plans.count({
+        where: {
+          test_plan_id: execution.test_plan_id,
+          OR: [
+            { student_id: safeUserId },
+            { planned_by: safeUserId }
+          ]
+        }
+      });
+
+      console.log('Access check:', {
+        userId: safeUserId.toString(),
+        planId: execution.test_plan_id.toString(),
+        hasAccess: hasAccess > 0
+      });
+
+      if (hasAccess === 0) {
+        console.error('User not associated with test plan:', {
+          userId: safeUserId.toString(),
+          planId: execution.test_plan_id.toString()
+        });
+        throw new UnauthorizedError('User does not have access to this test execution');
+      }
+
+      return execution;
+    } catch (error) {
+      // Enhanced error logging
+      console.error('Error in findExecutionWithAccess:', {
+        error: error instanceof Error ? error.message : String(error),
+        executionId: executionId?.toString(),
+        userId: userId?.toString()
+      });
+
+      // Rethrow the error with more context
+      if (error instanceof ValidationError || 
+          error instanceof UnauthorizedError || 
+          error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new ValidationError(`Failed to access test execution: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   private async calculateScore(execution: ExecutionWithPlan): Promise<number> {
@@ -457,6 +479,7 @@ export class TestExecutionService {
   private formatExecutionResponse(execution: ExecutionWithPlan): TestExecutionResponse {
     return {
       executionId: execution.execution_id,
+      testPlanId: execution.test_plan_id,
       status: execution.status,
       startedAt: execution.started_at,
       completedAt: execution.completed_at,
