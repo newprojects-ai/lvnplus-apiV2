@@ -91,27 +91,52 @@ export const getExecution = async (
   }
 };
 
-export const startExecution = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const startExecution = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const executionId = req.params.executionId;
+    const { executionId } = req.params;
     const userId = req.user?.id;
+
+    console.log('Start Test Execution Request:', {
+      executionId,
+      userId: userId?.toString()
+    });
+
+    // Validate input
+    if (!executionId) {
+      console.error('Missing executionId in request');
+      return res.status(400).json({ 
+        message: 'Execution ID is required', 
+        error: 'BAD_REQUEST' 
+      });
+    }
 
     if (!userId) {
       console.error('Unauthorized - Missing user ID');
       return res.status(401).json({ 
-        error: 'Unauthorized',
         message: 'User ID is required',
-        details: 'No user ID found in request'
+        error: 'UNAUTHORIZED'
       });
     }
 
-    const execution = await executionService.startExecution(executionId, userId);
-    res.json(execution);
+    // Start the execution
+    const result = await executionService.startExecution(
+      BigInt(executionId),
+      userId
+    );
+
+    // Send successful response
+    res.status(200).json({
+      message: 'Test execution started successfully',
+      data: result
+    });
   } catch (error) {
+    console.error('Error in startExecution controller:', {
+      errorName: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
+
+    // Pass to error handling middleware
     next(error);
   }
 };
@@ -238,6 +263,59 @@ export const pauseTest = async (
     const execution = await executionService.pauseExecution(executionId, userId);
     res.status(200).json(execution);
   } catch (error) {
+    next(error);
+  }
+};
+
+export const submitAllAnswers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { executionId } = req.params;
+    const { endTime, responses } = req.body;
+    const userId = req.user.id;
+
+    console.log('Submit All Answers Controller Method Called:', {
+      executionId,
+      userId: userId.toString(),
+      endTime,
+      responsesCount: responses?.length
+    });
+
+    // Validate input
+    if (!executionId) {
+      console.error('Missing executionId in request');
+      return res.status(400).json({ 
+        message: 'Execution ID is required', 
+        error: 'BAD_REQUEST' 
+      });
+    }
+
+    // Create service instance
+    const testExecutionService = new TestExecutionService();
+
+    // Submit answers
+    const result = await testExecutionService.submitAllAnswers(
+      BigInt(executionId), 
+      userId, 
+      { 
+        endTime, 
+        responses 
+      }
+    );
+
+    // Send successful response
+    res.status(200).json({
+      message: 'Answers submitted successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error in submitAllAnswers controller:', {
+      errorName: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack,
+      requestBody: JSON.stringify(req.body)
+    });
+
+    // Pass to error handling middleware
     next(error);
   }
 };

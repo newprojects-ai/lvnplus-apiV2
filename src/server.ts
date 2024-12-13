@@ -39,6 +39,10 @@ app.use(cookieParser());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Routes
+console.log('Registering routes...');
+console.log('Auth routes:', authRoutes);
+console.log('Execution routes:', executionRoutes);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/subjects', subjectRoutes);
@@ -47,7 +51,22 @@ app.use('/api', subtopicRoutes);
 app.use('/api/tests/plans', testPlanRoutes);
 app.use('/api/tests', testRoutes);
 app.use('/api/tests', executionRoutes);
+app.use('/api/executions', executionRoutes);
 app.use('/api/questions', questionRoutes);
+
+console.log('Routes registered. Checking route stack...');
+app._router.stack.forEach((r) => {
+  if (r.route) {
+    console.log('Registered route:', r.route.path);
+  } else if (r.handle && r.handle.name === 'router') {
+    console.log('Router middleware registered');
+    r.handle.stack.forEach((route) => {
+      if (route.route) {
+        console.log('  Subroute:', route.route.path);
+      }
+    });
+  }
+});
 
 // Error handling
 app.use(notFoundHandler);

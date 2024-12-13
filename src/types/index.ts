@@ -138,6 +138,16 @@ export interface SubmitAnswerDTO {
   answer: string;
 }
 
+export interface SubmitAllAnswersDTO {
+  executionId: number;
+  endTime: number;
+  responses: {
+    questionId: number;
+    answer: string;
+    timeTaken: number;
+  }[];
+}
+
 export interface TestResultResponse {
   id: string;
   testSessionId: string;
