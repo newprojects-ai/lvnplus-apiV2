@@ -66,15 +66,18 @@ model subtopics {
 model test_executions {
   execution_id BigInt                 @id @default(autoincrement())
   test_plan_id BigInt
+  student_id   BigInt                 // Student who took the test
   status       test_executions_status
   started_at   DateTime?              @db.Timestamp(0)
   completed_at DateTime?              @db.Timestamp(0)
   test_data    String                 @db.LongText
   score        Int?
   test_plans   test_plans             @relation(fields: [test_plan_id], references: [test_plan_id], onUpdate: Restrict, map: "test_executions_ibfk_1")
+  users        users                  @relation(fields: [student_id], references: [user_id], onUpdate: Restrict, map: "test_executions_ibfk_2")
 
   @@index([status], map: "idx_test_executions_status")
   @@index([test_plan_id], map: "test_plan_id")
+  @@index([student_id], map: "idx_test_executions_student")
 }
 
 model test_plans {
@@ -156,6 +159,8 @@ model users {
   test_plans_test_plans_planned_byTousers test_plans[]     @relation("test_plans_planned_byTousers")
   test_templates                          test_templates[]
   user_roles                              user_roles[]
+  test_executions                         test_executions[]
+
 }
 
 model difficulty_levels {

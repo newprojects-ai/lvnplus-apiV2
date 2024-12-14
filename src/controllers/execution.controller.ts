@@ -1,6 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { TestExecutionService } from '../services/execution.service';
 import { UpdateExecutionDTO } from '../types';
+import { 
+  NotFoundError, 
+  UnauthorizedError, 
+  ValidationError 
+} from '../utils/errors';
 
 const executionService = new TestExecutionService();
 
@@ -316,6 +321,174 @@ export const submitAllAnswers = async (req: Request, res: Response, next: NextFu
     });
 
     // Pass to error handling middleware
+    next(error);
+  }
+};
+
+export const getTestExecutionResults = async (
+  req: Request, 
+  res: Response, 
+  next: NextFunction
+) => {
+  // Comprehensive logging for debugging route issues
+  console.log('GET Test Execution Results - Full Request Details', {
+    fullUrl: req.originalUrl,
+    baseUrl: req.baseUrl,
+    path: req.path,
+    method: req.method,
+    params: JSON.stringify(req.params),
+    query: JSON.stringify(req.query),
+    headers: Object.keys(req.headers),
+    user: req.user?.id
+  });
+
+  try {
+    // Extract execution ID from request parameters or query
+    const executionId = req.params.executionId || req.query.executionId;
+
+    // Log detailed request information
+    console.log('Execution Results Request Specifics', {
+      extractedExecutionId: executionId,
+      paramExecutionId: req.params.executionId,
+      queryExecutionId: req.query.executionId,
+      userIdFromAuth: req.user?.id
+    });
+
+    // Validate inputs
+    if (!executionId) {
+      console.error('Missing Execution ID - Request Details', {
+        params: JSON.stringify(req.params),
+        query: JSON.stringify(req.query)
+      });
+      return res.status(400).json({ 
+        message: 'Execution ID is required',
+        details: {
+          params: req.params,
+          query: req.query
+        }
+      });
+    }
+
+    // Get user ID from authenticated request
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ 
+        message: 'User authentication is required' 
+      });
+    }
+
+    // Retrieve test execution results
+    const results = await executionService.getExecutionResults(
+      String(executionId), 
+      userId
+    );
+
+    // Log successful retrieval
+    console.log('Test Execution Results Retrieved Successfully', {
+      executionId,
+      resultScore: results?.score,
+      resultDetails: results ? Object.keys(results) : 'No results'
+    });
+
+    // Send successful response
+    res.json({
+      message: 'Test execution results retrieved successfully',
+      data: results
+    });
+  } catch (error) {
+    // Enhanced error logging
+    console.error('Error in getTestExecutionResults - Detailed Error Log', {
+      errorName: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack,
+      requestDetails: {
+        fullUrl: req.originalUrl,
+        baseUrl: req.baseUrl,
+        path: req.path,
+        params: JSON.stringify(req.params),
+        query: JSON.stringify(req.query),
+        userId: req.user?.id
+      }
+    });
+
+    // Handle specific error types
+    if (error instanceof NotFoundError) {
+      return res.status(404).json({ 
+        message: error.message,
+        details: {
+          executionId: req.params.executionId
+        }
+      });
+    }
+
+    if (error instanceof UnauthorizedError) {
+      return res.status(403).json({ 
+        message: error.message,
+        details: {
+          userId: req.user?.id
+        }
+      });
+    }
+
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ 
+        message: error.message,
+        details: {
+          params: req.params,
+          query: req.query
+        }
+      });
+    }
+
+    // Generic error response
+    next(error);
+  }
+};
+
+export const calculateTestScore = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const executionId = req.params.executionId;
+    const userId = req.user?.id;
+
+    console.log('Calculate test score request:', {
+      executionId,
+      userId: userId?.toString(),
+      params: req.params,
+      query: req.query
+    });
+
+    if (!userId) {
+      console.error('Unauthorized - Missing user ID');
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'User ID is required',
+        details: 'No user ID found in request'
+      });
+    }
+
+    if (!executionId) {
+      console.error('Bad request - Missing execution ID');
+      return res.status(400).json({ 
+        error: 'ValidationError',
+        message: 'Invalid execution ID provided',
+        details: 'Execution ID is required'
+      });
+    }
+
+    const executionService = new TestExecutionService();
+    const result = await executionService.calculateAndUpdateTestScore(
+      BigInt(executionId), 
+      BigInt(userId)
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error calculating test score:', error);
     next(error);
   }
 };

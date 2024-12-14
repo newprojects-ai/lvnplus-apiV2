@@ -41,12 +41,17 @@ export class QuestionService {
     userId: bigint,
     data: CreateQuestionDTO
   ): Promise<QuestionResponse> {
+    // Determine if the correct answer is a KaTeX expression
+    const isKaTeX = /\$.*\$/.test(data.correctAnswer);
+
     const question = await prisma.questions.create({
       data: {
         subtopic_id: data.subtopicId,
         question_text: data.questionText,
         options: JSON.stringify(data.options),
-        correct_answer: data.correctAnswer,
+        correct_answer: isKaTeX ? data.correctAnswer : null,
+        correct_answer_plain: !isKaTeX ? data.correctAnswer : null,
+        is_katex: isKaTeX,
         difficulty_level: data.difficultyLevel,
         created_by: userId,
       },
@@ -89,13 +94,18 @@ export class QuestionService {
       throw new UnauthorizedError('Not authorized to modify this question');
     }
 
+    // Determine if the correct answer is a KaTeX expression
+    const isKaTeX = /\$.*\$/.test(data.correctAnswer);
+
     const updatedQuestion = await prisma.questions.update({
       where: { question_id: questionId },
       data: {
         subtopic_id: data.subtopicId,
         question_text: data.questionText,
         options: JSON.stringify(data.options),
-        correct_answer: data.correctAnswer,
+        correct_answer: isKaTeX ? data.correctAnswer : null,
+        correct_answer_plain: !isKaTeX ? data.correctAnswer : null,
+        is_katex: isKaTeX,
         difficulty_level: data.difficultyLevel,
       },
       include: this.getQuestionIncludes(),
@@ -351,7 +361,9 @@ export class QuestionService {
       id: question.question_id.toString(),
       questionText: question.question_text,
       options: JSON.parse(question.options),
-      correctAnswer: question.correct_answer,
+      correctAnswer: question.correct_answer || question.correct_answer_plain,
+      correctAnswerPlain: question.correct_answer_plain,
+      isKaTeX: question.is_katex,
       difficultyLevel: question.difficulty_level,
       subtopic: {
         id: question.subtopics.subtopic_id,

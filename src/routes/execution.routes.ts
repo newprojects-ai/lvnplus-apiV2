@@ -8,8 +8,11 @@ import {
   resumeTest,
   submitAllAnswers,
   startExecution,
+  getTestExecutionResults,
+  calculateTestScore
 } from '../controllers/execution.controller';
 import { authenticate } from '../middleware/auth';
+import prisma from '../lib/prisma';
 
 const router = Router();
 
@@ -279,12 +282,114 @@ router.post('/executions/:executionId/submitAllAnswers', authenticate, submitAll
 router.post('/tests/executions/:executionId/start', authenticate, startExecution);
 router.post('/executions/:executionId/start', authenticate, startExecution);
 
+/**
+ * @swagger
+ * /tests/executions/{executionId}/results:
+ *   get:
+ *     summary: Get test execution results
+ *     tags: [Test Executions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: executionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Test execution results retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TestExecutionResults'
+ */
+router.get('/results/:executionId', authenticate, getTestExecutionResults);
+router.get('/executions/:executionId/results', authenticate, getTestExecutionResults);
+router.get('/tests/executions/:executionId/results', authenticate, getTestExecutionResults);
+
+/**
+ * @swagger
+ * /tests/executions/{executionId}/calculate-score:
+ *   post:
+ *     summary: Calculate and update test score
+ *     tags: [Test Executions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: executionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Test score calculated successfully
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/executions/:executionId/calculate-score', authenticate, calculateTestScore);
+
 // Alternative routes without /tests prefix
 router.post('/executions/:executionId/submit', authenticate, submitAnswer);
 router.post('/executions/:executionId/complete', authenticate, completeExecution);
 router.post('/executions/:executionId/pause', authenticate, pauseTest);
 router.post('/executions/:executionId/resume', authenticate, resumeTest);
 router.post('/executions/:executionId/submitAllAnswers', authenticate, submitAllAnswers);
+
+// Debug route to inspect test execution data
+router.get('/debug/:executionId', authenticate, async (req, res) => {
+  try {
+    const executionId = Number(req.params.executionId);
+    
+    // Fetch the full test execution
+    const execution = await prisma.test_executions.findUnique({
+      where: { execution_id: executionId },
+      include: {
+        test_plans: true
+      }
+    });
+
+    if (!execution) {
+      return res.status(404).json({ 
+        message: 'Execution not found',
+        executionId 
+      });
+    }
+
+    // Detailed logging of test data
+    console.log('Debug Execution Data', {
+      executionId: execution.execution_id,
+      testDataType: typeof execution.test_data,
+      testDataLength: execution.test_data.length,
+      testDataFirstChars: execution.test_data.substring(0, 500),
+      testDataLastChars: execution.test_data.substring(Math.max(0, execution.test_data.length - 500)),
+      studentId: execution.student_id,
+      testPlanId: execution.test_plan_id
+    });
+
+    res.json({
+      executionId: execution.execution_id,
+      testData: execution.test_data,
+      testDataType: typeof execution.test_data,
+      testDataLength: execution.test_data.length,
+      studentId: execution.student_id,
+      testPlanId: execution.test_plan_id
+    });
+  } catch (error) {
+    console.error('Debug route error', {
+      errorName: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
+    res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error.message 
+    });
+  }
+});
 
 // Add a simple root route for debugging
 router.get('/', (req, res) => {

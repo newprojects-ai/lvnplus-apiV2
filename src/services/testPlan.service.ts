@@ -10,9 +10,18 @@ export class TestPlanService {
     plannerId: bigint,
     data: CreateTestPlanDTO
   ): Promise<TestPlanResponse> {
+    // Validate student_id is provided
+    if (!data.studentId) {
+      console.error('Attempt to create test plan without student ID', {
+        plannerId: plannerId.toString(),
+        providedData: JSON.stringify(data)
+      });
+      throw new ValidationError('A student must be assigned to the test plan. Student ID is required.');
+    }
+
     // Ensure all IDs are converted to BigInt
     const safePlannerId = BigInt(plannerId);
-    const safeStudentId = data.studentId ? BigInt(data.studentId) : null;
+    const safeStudentId = BigInt(data.studentId);
     const safeBoardId = data.boardId ? BigInt(data.boardId) : null;
 
     // Validate and convert subtopic IDs
@@ -40,7 +49,7 @@ export class TestPlanService {
     const testPlan = await prisma.test_plans.create({
       data: {
         board_id: safeBoardId ? Number(safeBoardId) : null,
-        student_id: safeStudentId ? Number(safeStudentId) : null,
+        student_id: Number(safeStudentId),
         planned_by: Number(safePlannerId),
         test_type: data.testType,
         timing_type: data.timingType,
@@ -59,6 +68,7 @@ export class TestPlanService {
     const testExecution = await prisma.test_executions.create({
       data: {
         test_plan_id: testPlan.test_plan_id,
+        student_id: Number(safeStudentId), // Set student_id from test plan
         status: 'NOT_STARTED',
         test_data: JSON.stringify({
           questions: randomQuestions.map(q => ({
@@ -67,6 +77,8 @@ export class TestPlanService {
             question_text: q.question_text,
             options: JSON.parse(q.options),
             difficulty_level: Number(q.difficulty_level),
+            correct_answer: q.correct_answer,
+            correct_answer_plain: q.correct_answer_plain || q.correct_answer,
           })),
           responses: randomQuestions.map(q => ({
             question_id: Number(q.question_id),

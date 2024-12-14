@@ -112,24 +112,42 @@ export interface TestPlanResponse {
 export interface TestExecutionResponse {
   executionId: string | bigint;
   testPlanId: string | bigint;
+  studentId?: string | bigint;
   status: string;
   startedAt?: Date;
-  testData: {
-    questions: Array<{
-      id: number;
-      content: string;
-      options?: string[];
-      topicId: number;
-      subtopicId: number;
-      difficulty: 'easy' | 'medium' | 'hard';
-    }>;
-    responses: Record<string, string>;
-    timingData: {
-      startTime: number;
-      endTime?: number;
-      pausedDuration?: number;
-    };
+  testData: string | any;
+  responses: Record<string, string>;
+  timingData: {
+    startTime: number;
+    endTime?: number;
+    pausedDuration?: number;
   };
+  score?: number;
+}
+
+export interface TestExecutionQuestionData {
+  question_id: number;
+  subtopic_id: number;
+  question_text: string;
+  options: string[];
+  difficulty_level: number;
+  correct_answer: string;
+  correct_answer_plain?: string;
+}
+
+export interface TestExecutionResponseData {
+  question_id: number;
+  student_answer: string | null;
+  is_correct: boolean | null;
+  time_spent: number;
+  confidence_level?: number | null;
+}
+
+export interface TestExecutionData {
+  questions: TestExecutionQuestionData[];
+  responses: TestExecutionResponseData[];
+  total_correct?: number;
+  total_questions?: number;
   score?: number;
 }
 
