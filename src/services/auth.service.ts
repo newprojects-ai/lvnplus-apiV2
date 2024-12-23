@@ -83,7 +83,14 @@ export class AuthService {
         throw new UnauthorizedError('Invalid email or password');
       }
 
-      const token = this.generateToken(user);
+      // Check if user has the requested role
+      const userRoles = user.user_roles.map(ur => ur.roles.role_name);
+      if (!userRoles.includes(credentials.role)) {
+        throw new UnauthorizedError('User is not authorized for the requested role');
+      }
+
+      // Generate token with the specific role
+      const token = this.generateToken(user, credentials.role);
 
       return {
         user: this.formatUserResponse(user),
@@ -98,15 +105,13 @@ export class AuthService {
     }
   }
 
-  private generateToken(user: any): string {
-    const roles = user.user_roles.map((ur: any) => ur.roles.role_name);
-    
+  private generateToken(user: any, role: string): string {
     try {
       return jwt.sign(
         {
           userId: user.user_id.toString(),
           email: user.email,
-          roles,
+          role, // Include only the specific role being used for this session
         },
         process.env.JWT_SECRET!,
         { 

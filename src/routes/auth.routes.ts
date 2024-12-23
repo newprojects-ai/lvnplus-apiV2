@@ -68,12 +68,16 @@ router.post('/register', validateRegistration, register);
  *             required:
  *               - email
  *               - password
+ *               - role
  *             properties:
  *               email:
  *                 type: string
  *                 format: email
  *               password:
  *                 type: string
+ *               role:
+ *                 type: string
+ *                 description: The role to login as (must be one of the user's assigned roles)
  *     responses:
  *       "200":
  *         description: Login successful

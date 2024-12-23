@@ -9,6 +9,7 @@ export interface RegisterUserDTO {
 export interface LoginUserDTO {
   email: string;
   password: string;
+  role: string;
 }
 
 export interface AuthResponse {
