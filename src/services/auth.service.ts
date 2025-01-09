@@ -18,7 +18,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
     // Default role if none provided
-    const roles = data.roles?.length ? data.roles : ['STUDENT'];
+    const roles = data.roles?.length ? data.roles : ['STUDENT']
 
     const user = await prisma.users.create({
       data: {
@@ -55,6 +55,11 @@ export class AuthService {
 
   async login(credentials: LoginUserDTO): Promise<AuthResponse> {
     try {
+      console.log('Login attempt:', {
+        email: credentials.email,
+        requestedRole: credentials.role.toUpperCase() // Normalize to uppercase
+      });
+
       const user = await prisma.users.findUnique({
         where: { email: credentials.email },
         include: {
@@ -64,6 +69,14 @@ export class AuthService {
             },
           },
         },
+      });
+
+      console.log('User found:', {
+        user: user ? {
+          id: user.user_id,
+          email: user.email,
+          roles: user.user_roles.map(ur => ur.roles.role_name.toUpperCase()) // Normalize to uppercase
+        } : null
       });
 
       if (!user) {
@@ -84,18 +97,27 @@ export class AuthService {
       }
 
       // Check if user has the requested role
-      const userRoles = user.user_roles.map(ur => ur.roles.role_name);
-      if (!userRoles.includes(credentials.role)) {
+      const userRoles = user.user_roles.map(ur => ur.roles.role_name.toUpperCase()); // Normalize to uppercase
+      console.log('User roles:', userRoles);
+      
+      if (!userRoles.includes(credentials.role.toUpperCase())) { // Normalize to uppercase
         throw new UnauthorizedError('User is not authorized for the requested role');
       }
 
       // Generate token with the specific role
-      const token = this.generateToken(user, credentials.role);
+      const token = this.generateToken(user, credentials.role.toUpperCase()); // Normalize to uppercase
 
-      return {
+      const response = {
         user: this.formatUserResponse(user),
         token,
       };
+      console.log('Login response:', {
+        userId: response.user.id,
+        email: response.user.email,
+        roles: response.user.roles
+      });
+
+      return response;
     } catch (error) {
       console.error('Login error:', {
         email: credentials.email,
@@ -131,7 +153,7 @@ export class AuthService {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
-      roles: user.user_roles.map((ur: any) => ur.roles.role_name),
+      roles: user.user_roles.map((ur: any) => ur.roles.role_name.toUpperCase()), // Normalize to uppercase
     };
   }
 }

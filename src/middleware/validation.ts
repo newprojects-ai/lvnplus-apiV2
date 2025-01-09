@@ -12,7 +12,7 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  role: z.string().min(1),
+  role: z.string().min(1).transform(val => val.toUpperCase()),
 });
 
 const subjectSchema = z.object({
