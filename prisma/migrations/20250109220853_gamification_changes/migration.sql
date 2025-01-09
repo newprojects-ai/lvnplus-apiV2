@@ -1,4 +1,21 @@
 -- CreateTable
+CREATE TABLE `difficulty_levels` (
+    `level_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `level_name` VARCHAR(50) NOT NULL,
+    `level_value` INTEGER NOT NULL,
+    `purpose` TEXT NOT NULL,
+    `characteristics` TEXT NOT NULL,
+    `focus_area` TEXT NOT NULL,
+    `steps_required` VARCHAR(50) NULL,
+    `created_at` TIMESTAMP(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
+    `active` BOOLEAN NULL DEFAULT true,
+
+    UNIQUE INDEX `level_name`(`level_name`),
+    UNIQUE INDEX `level_value`(`level_value`),
+    PRIMARY KEY (`level_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `exam_boards` (
     `board_id` INTEGER NOT NULL AUTO_INCREMENT,
     `board_name` VARCHAR(100) NOT NULL,
@@ -66,16 +83,16 @@ CREATE TABLE `subtopics` (
 CREATE TABLE `test_executions` (
     `execution_id` BIGINT NOT NULL AUTO_INCREMENT,
     `test_plan_id` BIGINT NOT NULL,
-    `student_id` BIGINT NOT NULL,
     `status` ENUM('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ABANDONED') NOT NULL,
     `started_at` TIMESTAMP(0) NULL,
     `completed_at` TIMESTAMP(0) NULL,
     `test_data` LONGTEXT NOT NULL,
     `score` INTEGER NULL,
+    `student_id` BIGINT NOT NULL,
 
     INDEX `idx_test_executions_status`(`status`),
+    INDEX `student_id`(`student_id`),
     INDEX `test_plan_id`(`test_plan_id`),
-    INDEX `idx_test_executions_student`(`student_id`),
     PRIMARY KEY (`execution_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -152,23 +169,6 @@ CREATE TABLE `users` (
 
     UNIQUE INDEX `email`(`email`),
     PRIMARY KEY (`user_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `difficulty_levels` (
-    `level_id` INTEGER NOT NULL AUTO_INCREMENT,
-    `level_name` VARCHAR(50) NOT NULL,
-    `level_value` INTEGER NOT NULL,
-    `purpose` TEXT NOT NULL,
-    `characteristics` TEXT NOT NULL,
-    `focus_area` TEXT NOT NULL,
-    `steps_required` VARCHAR(50) NULL,
-    `created_at` TIMESTAMP(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
-    `active` BOOLEAN NULL DEFAULT true,
-
-    UNIQUE INDEX `level_name`(`level_name`),
-    UNIQUE INDEX `level_value`(`level_value`),
-    PRIMARY KEY (`level_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey

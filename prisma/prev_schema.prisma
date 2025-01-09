@@ -7,6 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model difficulty_levels {
+  level_id        Int       @id @default(autoincrement())
+  level_name      String    @unique(map: "level_name") @db.VarChar(50)
+  level_value     Int       @unique(map: "level_value")
+  purpose         String    @db.Text
+  characteristics String    @db.Text
+  focus_area      String    @db.Text
+  steps_required  String?   @db.VarChar(50)
+  created_at      DateTime? @default(now()) @db.Timestamp(0)
+  active          Boolean?  @default(true)
+}
+
 model exam_boards {
   board_id       Int                    @id @default(autoincrement())
   board_name     String                 @unique(map: "board_name") @db.VarChar(100)
@@ -38,6 +50,7 @@ model questions {
   @@index([subtopic_id], map: "subtopic_id")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model roles {
   role_id     Int          @id @default(autoincrement())
   role_name   String       @unique(map: "role_name") @db.VarChar(50)
@@ -76,8 +89,8 @@ model test_executions {
   users        users                  @relation(fields: [student_id], references: [user_id], onUpdate: Restrict, map: "test_executions_ibfk_2")
 
   @@index([status], map: "idx_test_executions_status")
-  @@index([test_plan_id], map: "test_plan_id")
   @@index([student_id], map: "student_id")
+  @@index([test_plan_id], map: "test_plan_id")
 }
 
 model test_plans {
@@ -160,18 +173,6 @@ model users {
   test_plans_test_plans_planned_byTousers test_plans[]      @relation("test_plans_planned_byTousers")
   test_templates                          test_templates[]
   user_roles                              user_roles[]
-}
-
-model difficulty_levels {
-  level_id        Int       @id @default(autoincrement())
-  level_name      String    @unique(map: "level_name") @db.VarChar(50)
-  level_value     Int       @unique(map: "level_value")
-  purpose         String    @db.Text
-  characteristics String    @db.Text
-  focus_area      String    @db.Text
-  steps_required  String?   @db.VarChar(50)
-  created_at      DateTime? @default(now()) @db.Timestamp(0)
-  active          Boolean?  @default(true)
 }
 
 enum test_executions_status {
