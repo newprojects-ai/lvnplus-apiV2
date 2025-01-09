@@ -17,6 +17,7 @@ import subtopicRoutes from './routes/subtopic.routes';
 import testPlanRoutes from './routes/testPlan.routes';
 import executionRoutes from './routes/execution.routes';
 import questionRoutes from './routes/question.routes';
+import gamificationRoutes from './routes/gamification.routes';
 
 config();
 
@@ -53,6 +54,7 @@ app.use('/api/tests', testRoutes);
 app.use('/api/tests', executionRoutes);
 app.use('/api/executions', executionRoutes);
 app.use('/api/questions', questionRoutes);
+app.use('/api/gamification', gamificationRoutes);
 
 console.log('Routes registered. Checking route stack...');
 app._router.stack.forEach((r) => {
