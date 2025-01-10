@@ -46,11 +46,10 @@ model roles {
 }
 
 model subjects {
-  subject_id      Int               @id @default(autoincrement())
-  subject_name    String            @unique(map: "subject_name") @db.VarChar(100)
-  description     String?           @db.Text
-  topics          topics[]
-  subject_mastery subject_mastery[]
+  subject_id   Int      @id @default(autoincrement())
+  subject_name String   @unique(map: "subject_name") @db.VarChar(100)
+  description  String?  @db.Text
+  topics       topics[]
 }
 
 model subtopics {
@@ -67,18 +66,18 @@ model subtopics {
 model test_executions {
   execution_id BigInt                 @id @default(autoincrement())
   test_plan_id BigInt
-  student_id   BigInt // Student who took the test
   status       test_executions_status
   started_at   DateTime?              @db.Timestamp(0)
   completed_at DateTime?              @db.Timestamp(0)
   test_data    String                 @db.LongText
   score        Int?
+  student_id   BigInt
   test_plans   test_plans             @relation(fields: [test_plan_id], references: [test_plan_id], onUpdate: Restrict, map: "test_executions_ibfk_1")
   users        users                  @relation(fields: [student_id], references: [user_id], onUpdate: Restrict, map: "test_executions_ibfk_2")
 
   @@index([status], map: "idx_test_executions_status")
   @@index([test_plan_id], map: "test_plan_id")
-  @@index([student_id], map: "idx_test_executions_student")
+  @@index([student_id], map: "student_id")
 }
 
 model test_plans {
@@ -147,25 +146,20 @@ model user_roles {
 }
 
 model users {
-  user_id                                 BigInt                 @id @default(autoincrement())
-  email                                   String                 @unique(map: "email") @db.VarChar(255)
-  password_hash                           String                 @db.VarChar(255)
-  first_name                              String?                @db.VarChar(100)
-  last_name                               String?                @db.VarChar(100)
-  created_at                              DateTime?              @default(now()) @db.Timestamp(0)
-  updated_at                              DateTime?              @default(now()) @db.Timestamp(0)
-  active                                  Boolean?               @default(true)
+  user_id                                 BigInt            @id @default(autoincrement())
+  email                                   String            @unique(map: "email") @db.VarChar(255)
+  password_hash                           String            @db.VarChar(255)
+  first_name                              String?           @db.VarChar(100)
+  last_name                               String?           @db.VarChar(100)
+  created_at                              DateTime?         @default(now()) @db.Timestamp(0)
+  updated_at                              DateTime?         @default(now()) @db.Timestamp(0)
+  active                                  Boolean?          @default(true)
   questions                               questions[]
-  test_plans_test_plans_student_idTousers test_plans[]           @relation("test_plans_student_idTousers")
-  test_plans_test_plans_planned_byTousers test_plans[]           @relation("test_plans_planned_byTousers")
+  test_executions                         test_executions[]
+  test_plans_test_plans_student_idTousers test_plans[]      @relation("test_plans_student_idTousers")
+  test_plans_test_plans_planned_byTousers test_plans[]      @relation("test_plans_planned_byTousers")
   test_templates                          test_templates[]
   user_roles                              user_roles[]
-  test_executions                         test_executions[]
-  student_progress                        student_progress?
-  student_achievements                    student_achievements[]
-  student_rewards                         student_rewards[]
-  subject_mastery                         subject_mastery[]
-  activity_log                            activity_log[]
 }
 
 model difficulty_levels {
@@ -178,104 +172,6 @@ model difficulty_levels {
   steps_required  String?   @db.VarChar(50)
   created_at      DateTime? @default(now()) @db.Timestamp(0)
   active          Boolean?  @default(true)
-}
-
-model student_progress {
-  user_id            BigInt    @id
-  level              Int       @default(1)
-  current_xp         Int       @default(0)
-  next_level_xp      Int       @default(1000)
-  streak_days        Int       @default(0)
-  last_activity_date DateTime? @db.Timestamp(0)
-  total_points       Int       @default(0)
-  created_at         DateTime? @default(now()) @db.Timestamp(0)
-  updated_at         DateTime? @default(now()) @db.Timestamp(0)
-  user               users     @relation(fields: [user_id], references: [user_id])
-
-  @@index([user_id])
-}
-
-model achievements {
-  achievement_id       BigInt                 @id @default(autoincrement())
-  title                String                 @db.VarChar(255)
-  description          String                 @db.Text
-  category             String                 @db.VarChar(50)
-  points               Int
-  icon                 String?                @db.VarChar(100)
-  required_criteria    String                 @db.Text
-  created_at           DateTime?              @default(now()) @db.Timestamp(0)
-  student_achievements student_achievements[]
-
-  @@index([category])
-}
-
-model student_achievements {
-  user_id        BigInt
-  achievement_id BigInt
-  unlocked_at    DateTime?    @default(now()) @db.Timestamp(0)
-  progress       Int          @default(0)
-  user           users        @relation(fields: [user_id], references: [user_id])
-  achievements   achievements @relation(fields: [achievement_id], references: [achievement_id])
-
-  @@id([user_id, achievement_id])
-  @@index([user_id])
-}
-
-model rewards {
-  reward_id       BigInt            @id @default(autoincrement())
-  title           String            @db.VarChar(255)
-  description     String            @db.Text
-  category        String            @db.VarChar(50)
-  cost            Int
-  icon            String?           @db.VarChar(100)
-  created_at      DateTime?         @default(now()) @db.Timestamp(0)
-  student_rewards student_rewards[]
-
-  @@index([category])
-}
-
-model student_rewards {
-  user_id      BigInt
-  reward_id    BigInt
-  purchased_at DateTime? @default(now()) @db.Timestamp(0)
-  user         users     @relation(fields: [user_id], references: [user_id])
-  rewards      rewards   @relation(fields: [reward_id], references: [reward_id])
-
-  @@id([user_id, reward_id])
-  @@index([user_id])
-}
-
-model subject_mastery {
-  user_id                   BigInt
-  subject_id                Int
-  mastery_level             Int       @default(0)
-  total_questions_attempted Int       @default(0)
-  correct_answers           Int       @default(0)
-  last_test_date            DateTime? @db.Timestamp(0)
-  user                      users     @relation(fields: [user_id], references: [user_id])
-  subjects                  subjects  @relation(fields: [subject_id], references: [subject_id])
-
-  @@id([user_id, subject_id])
-  @@index([user_id])
-}
-
-model activity_log {
-  activity_id   BigInt    @id @default(autoincrement())
-  user_id       BigInt
-  activity_type String    @db.VarChar(50)
-  xp_earned     Int       @default(0)
-  details       String?   @db.Text
-  created_at    DateTime? @default(now()) @db.Timestamp(0)
-  user          users     @relation(fields: [user_id], references: [user_id])
-
-  @@index([user_id, created_at])
-}
-
-model level_config {
-  level       Int       @id
-  xp_required Int
-  perks       String?   @db.Text
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
 }
 
 enum test_executions_status {
